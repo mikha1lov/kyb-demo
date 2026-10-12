@@ -142,7 +142,7 @@ async fn remove(
 async fn submit(State(state): State<AppState>, Path(id): Path<Uuid>) -> Result<Json<ApplicationView>, ApiError> {
     editable(&state, id).await?;
     if !respond(&state, id).await?.complete {
-        return Err(ApiError::unprocessable("incomplete", "Required documents are missing or need attention"));
+        return Err(ApiError::unprocessable("incomplete", "Some requirements are still open"));
     }
     store::submit(&state.pool, id).await?.ok_or(ApiError::Conflict("already_submitted"))?;
     Ok(Json(respond(&state, id).await?))

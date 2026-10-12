@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
@@ -5,7 +7,7 @@ use uuid::Uuid;
 
 use crate::{
     compare::{self, RequirementResult},
-    domain::{Extracted, Requirement, Severity, Typed},
+    domain::{DocKind, Extracted, Field, Requirement, Severity, Typed},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -22,8 +24,11 @@ pub enum EntityType {
 pub struct Business {
     pub country: String,
     pub entity_type: EntityType,
+    #[serde(default)]
     pub legal_name: String,
+    #[serde(default)]
     pub registration_number: String,
+    #[serde(default)]
     pub address: String,
 }
 
@@ -42,16 +47,22 @@ impl Business {
         if self.country.len() != 2 || !self.country.chars().all(|c| c.is_ascii_uppercase()) {
             return Err("country must be a two-letter code");
         }
-        if self.legal_name.chars().count() < 2 {
+        if !self.legal_name.is_empty() && self.legal_name.chars().count() < 2 {
             return Err("legal name is too short");
         }
-        if self.registration_number.chars().count() < 5 {
+        if !self.registration_number.is_empty() && self.registration_number.chars().count() < 5 {
             return Err("registration number is too short");
         }
-        if self.address.chars().count() < 5 {
+        if !self.address.is_empty() && self.address.chars().count() < 5 {
             return Err("address is too short");
         }
         Ok(())
+    }
+
+    pub fn details_complete(&self) -> bool {
+        self.legal_name.chars().count() >= 2
+            && self.registration_number.chars().count() >= 5
+            && self.address.chars().count() >= 5
     }
 
     pub fn typed(&self) -> Typed {
@@ -135,6 +146,25 @@ pub struct ChecklistItem {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct Suggestion {
+    pub value: String,
+    pub document_id: Uuid,
+    pub confidence: f32,
+}
+
+#[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Suggestions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub legal_name: Option<Suggestion>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub registration_number: Option<Suggestion>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<Suggestion>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ApplicationView {
     pub id: Uuid,
     pub status: Status,
@@ -142,6 +172,9 @@ pub struct ApplicationView {
     pub sources: Sources,
     pub documents: Vec<DocumentView>,
     pub checklist: Vec<ChecklistItem>,
+    pub suggestions: Suggestions,
+    pub requirements_met: bool,
+    pub business_complete: bool,
     pub complete: bool,
     pub submitted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
@@ -165,6 +198,39 @@ fn checklist(documents: &[DocumentView]) -> Vec<ChecklistItem> {
         .collect()
 }
 
+const MIN_SUGGESTION_CONFIDENCE: f32 = 0.7;
+
+fn authority(kind: DocKind) -> Option<u8> {
+    match kind {
+        DocKind::Registration => Some(0),
+        DocKind::BankStatement => Some(1),
+        DocKind::UtilityBill => Some(2),
+        _ => None,
+    }
+}
+
+fn suggest(documents: &[DocumentView], field: impl Fn(&Extracted) -> &Field) -> Option<Suggestion> {
+    documents
+        .iter()
+        .filter_map(|document| {
+            let rank = authority(document.extracted.kind)?;
+            let field = field(&document.extracted);
+            let value = field.value.as_deref()?.trim();
+            (!value.is_empty() && field.confidence >= MIN_SUGGESTION_CONFIDENCE)
+                .then(|| (rank, field.confidence, document.id, value.to_string()))
+        })
+        .min_by(|a, b| a.0.cmp(&b.0).then(b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal)))
+        .map(|(_, confidence, document_id, value)| Suggestion { value, document_id, confidence })
+}
+
+fn suggestions(documents: &[DocumentView]) -> Suggestions {
+    Suggestions {
+        legal_name: suggest(documents, |e| &e.legal_name),
+        registration_number: suggest(documents, |e| &e.registration_number),
+        address: suggest(documents, |e| &e.address),
+    }
+}
+
 pub fn view(application: ApplicationRow, documents: Vec<DocumentRow>, today: NaiveDate) -> ApplicationView {
     let status = application.status();
     let business = application.business.map(|b| b.0);
@@ -180,7 +246,9 @@ pub fn view(application: ApplicationRow, documents: Vec<DocumentRow>, today: Nai
         })
         .collect();
     let checklist = checklist(&documents);
-    let complete = checklist.iter().all(|item| item.document_id.is_some());
+    let suggestions = suggestions(&documents);
+    let requirements_met = checklist.iter().all(|item| item.document_id.is_some());
+    let business_complete = business.as_ref().is_some_and(Business::details_complete);
 
     ApplicationView {
         id: application.id,
@@ -189,7 +257,10 @@ pub fn view(application: ApplicationRow, documents: Vec<DocumentRow>, today: Nai
         sources: application.sources.0,
         documents,
         checklist,
-        complete,
+        suggestions,
+        requirements_met,
+        business_complete,
+        complete: requirements_met && business_complete,
         submitted_at: application.submitted_at,
         created_at: application.created_at,
         updated_at: application.updated_at,
@@ -316,6 +387,57 @@ mod tests {
         let v = view(app, docs, today);
         let formation = v.checklist.iter().find(|c| c.requirement == Requirement::Formation).unwrap();
         assert!(formation.document_id.is_none());
+    }
+
+    #[test]
+    fn a_draft_business_may_leave_the_details_empty() {
+        let draft = Business { legal_name: String::new(), registration_number: String::new(), address: String::new(), ..business() };
+        assert!(draft.validate().is_ok());
+        assert!(!draft.details_complete());
+        assert!(business().details_complete());
+    }
+
+    #[test]
+    fn details_are_missing_until_the_business_is_filled_in() {
+        let today = day(2026, 10, 12);
+        let draft = Business { legal_name: String::new(), registration_number: String::new(), address: String::new(), ..business() };
+        let app = application(Some(draft));
+        let docs = vec![
+            row(app.id, "cert.pdf", extracted(DocKind::Registration, None, Some("2023-03-14"))),
+            row(app.id, "statement.pdf", extracted(DocKind::BankStatement, Some("2026-09-30"), None)),
+        ];
+        let v = view(app, docs, today);
+        assert!(v.requirements_met);
+        assert!(!v.business_complete);
+        assert!(!v.complete);
+    }
+
+    #[test]
+    fn suggestions_prefer_the_registration_certificate() {
+        let today = day(2026, 10, 12);
+        let app = application(Some(business()));
+        let mut statement = extracted(DocKind::BankStatement, Some("2026-09-30"), None);
+        statement.legal_name = field(Some("SOMEONE ELSE PE"));
+        let cert = extracted(DocKind::Registration, None, Some("2023-03-14"));
+        let docs = vec![row(app.id, "statement.pdf", statement), row(app.id, "cert.pdf", cert)];
+        let cert_id = docs[1].id;
+        let v = view(app, docs, today);
+        let name = v.suggestions.legal_name.unwrap();
+        assert_eq!(name.value, "TOKOEV ALIYAR BEKOVICH PE");
+        assert_eq!(name.document_id, cert_id);
+    }
+
+    #[test]
+    fn suggestions_ignore_unsure_values_and_unrelated_documents() {
+        let today = day(2026, 10, 12);
+        let app = application(Some(business()));
+        let mut unsure = extracted(DocKind::Registration, None, Some("2023-03-14"));
+        unsure.address = Field { value: Some("SOMEWHERE".into()), confidence: 0.4, page: Some(1) };
+        let invoice = extracted(DocKind::Invoice, None, Some("2026-09-01"));
+        let docs = vec![row(app.id, "cert.pdf", unsure), row(app.id, "invoice.pdf", invoice)];
+        let v = view(app, docs, today);
+        assert!(v.suggestions.address.is_none());
+        assert_eq!(v.suggestions.registration_number.unwrap().value, "20000000000001");
     }
 
     #[test]
