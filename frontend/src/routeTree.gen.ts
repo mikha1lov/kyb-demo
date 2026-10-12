@@ -11,10 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as OnboardingIdRouteImport } from './routes/onboarding.$id'
 import { Route as OnboardingBusinessRouteImport } from './routes/onboarding.business'
-import { Route as OnboardingDocumentsRouteImport } from './routes/onboarding.documents'
-import { Route as OnboardingDoneRouteImport } from './routes/onboarding.done'
-import { Route as OnboardingReviewRouteImport } from './routes/onboarding.review'
+import { Route as OnboardingIdIndexRouteImport } from './routes/onboarding.$id.index'
+import { Route as OnboardingIdBusinessRouteImport } from './routes/onboarding.$id.business'
+import { Route as OnboardingIdDocumentsRouteImport } from './routes/onboarding.$id.documents'
+import { Route as OnboardingIdDoneRouteImport } from './routes/onboarding.$id.done'
+import { Route as OnboardingIdReviewRouteImport } from './routes/onboarding.$id.review'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -26,77 +29,108 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingIdRoute = OnboardingIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => OnboardingRoute,
+} as any)
 const OnboardingBusinessRoute = OnboardingBusinessRouteImport.update({
   id: '/business',
   path: '/business',
   getParentRoute: () => OnboardingRoute,
 } as any)
-const OnboardingDocumentsRoute = OnboardingDocumentsRouteImport.update({
+const OnboardingIdIndexRoute = OnboardingIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OnboardingIdRoute,
+} as any)
+const OnboardingIdBusinessRoute = OnboardingIdBusinessRouteImport.update({
+  id: '/business',
+  path: '/business',
+  getParentRoute: () => OnboardingIdRoute,
+} as any)
+const OnboardingIdDocumentsRoute = OnboardingIdDocumentsRouteImport.update({
   id: '/documents',
   path: '/documents',
-  getParentRoute: () => OnboardingRoute,
+  getParentRoute: () => OnboardingIdRoute,
 } as any)
-const OnboardingDoneRoute = OnboardingDoneRouteImport.update({
+const OnboardingIdDoneRoute = OnboardingIdDoneRouteImport.update({
   id: '/done',
   path: '/done',
-  getParentRoute: () => OnboardingRoute,
+  getParentRoute: () => OnboardingIdRoute,
 } as any)
-const OnboardingReviewRoute = OnboardingReviewRouteImport.update({
+const OnboardingIdReviewRoute = OnboardingIdReviewRouteImport.update({
   id: '/review',
   path: '/review',
-  getParentRoute: () => OnboardingRoute,
+  getParentRoute: () => OnboardingIdRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/onboarding/$id': typeof OnboardingIdRouteWithChildren
   '/onboarding/business': typeof OnboardingBusinessRoute
-  '/onboarding/documents': typeof OnboardingDocumentsRoute
-  '/onboarding/done': typeof OnboardingDoneRoute
-  '/onboarding/review': typeof OnboardingReviewRoute
+  '/onboarding/$id/business': typeof OnboardingIdBusinessRoute
+  '/onboarding/$id/documents': typeof OnboardingIdDocumentsRoute
+  '/onboarding/$id/done': typeof OnboardingIdDoneRoute
+  '/onboarding/$id/review': typeof OnboardingIdReviewRoute
+  '/onboarding/$id/': typeof OnboardingIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRouteWithChildren
   '/onboarding/business': typeof OnboardingBusinessRoute
-  '/onboarding/documents': typeof OnboardingDocumentsRoute
-  '/onboarding/done': typeof OnboardingDoneRoute
-  '/onboarding/review': typeof OnboardingReviewRoute
+  '/onboarding/$id/business': typeof OnboardingIdBusinessRoute
+  '/onboarding/$id/documents': typeof OnboardingIdDocumentsRoute
+  '/onboarding/$id/done': typeof OnboardingIdDoneRoute
+  '/onboarding/$id/review': typeof OnboardingIdReviewRoute
+  '/onboarding/$id': typeof OnboardingIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/onboarding/$id': typeof OnboardingIdRouteWithChildren
   '/onboarding/business': typeof OnboardingBusinessRoute
-  '/onboarding/documents': typeof OnboardingDocumentsRoute
-  '/onboarding/done': typeof OnboardingDoneRoute
-  '/onboarding/review': typeof OnboardingReviewRoute
+  '/onboarding/$id/business': typeof OnboardingIdBusinessRoute
+  '/onboarding/$id/documents': typeof OnboardingIdDocumentsRoute
+  '/onboarding/$id/done': typeof OnboardingIdDoneRoute
+  '/onboarding/$id/review': typeof OnboardingIdReviewRoute
+  '/onboarding/$id/': typeof OnboardingIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/onboarding'
+    | '/onboarding/$id'
     | '/onboarding/business'
-    | '/onboarding/documents'
-    | '/onboarding/done'
-    | '/onboarding/review'
+    | '/onboarding/$id/business'
+    | '/onboarding/$id/documents'
+    | '/onboarding/$id/done'
+    | '/onboarding/$id/review'
+    | '/onboarding/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/onboarding'
     | '/onboarding/business'
-    | '/onboarding/documents'
-    | '/onboarding/done'
-    | '/onboarding/review'
+    | '/onboarding/$id/business'
+    | '/onboarding/$id/documents'
+    | '/onboarding/$id/done'
+    | '/onboarding/$id/review'
+    | '/onboarding/$id'
   id:
     | '__root__'
     | '/'
     | '/onboarding'
+    | '/onboarding/$id'
     | '/onboarding/business'
-    | '/onboarding/documents'
-    | '/onboarding/done'
-    | '/onboarding/review'
+    | '/onboarding/$id/business'
+    | '/onboarding/$id/documents'
+    | '/onboarding/$id/done'
+    | '/onboarding/$id/review'
+    | '/onboarding/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -120,6 +154,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding/$id': {
+      id: '/onboarding/$id'
+      path: '/$id'
+      fullPath: '/onboarding/$id'
+      preLoaderRoute: typeof OnboardingIdRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
     '/onboarding/business': {
       id: '/onboarding/business'
       path: '/business'
@@ -127,42 +168,72 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingBusinessRouteImport
       parentRoute: typeof OnboardingRoute
     }
-    '/onboarding/documents': {
-      id: '/onboarding/documents'
+    '/onboarding/$id/': {
+      id: '/onboarding/$id/'
+      path: '/'
+      fullPath: '/onboarding/$id/'
+      preLoaderRoute: typeof OnboardingIdIndexRouteImport
+      parentRoute: typeof OnboardingIdRoute
+    }
+    '/onboarding/$id/business': {
+      id: '/onboarding/$id/business'
+      path: '/business'
+      fullPath: '/onboarding/$id/business'
+      preLoaderRoute: typeof OnboardingIdBusinessRouteImport
+      parentRoute: typeof OnboardingIdRoute
+    }
+    '/onboarding/$id/documents': {
+      id: '/onboarding/$id/documents'
       path: '/documents'
-      fullPath: '/onboarding/documents'
-      preLoaderRoute: typeof OnboardingDocumentsRouteImport
-      parentRoute: typeof OnboardingRoute
+      fullPath: '/onboarding/$id/documents'
+      preLoaderRoute: typeof OnboardingIdDocumentsRouteImport
+      parentRoute: typeof OnboardingIdRoute
     }
-    '/onboarding/done': {
-      id: '/onboarding/done'
+    '/onboarding/$id/done': {
+      id: '/onboarding/$id/done'
       path: '/done'
-      fullPath: '/onboarding/done'
-      preLoaderRoute: typeof OnboardingDoneRouteImport
-      parentRoute: typeof OnboardingRoute
+      fullPath: '/onboarding/$id/done'
+      preLoaderRoute: typeof OnboardingIdDoneRouteImport
+      parentRoute: typeof OnboardingIdRoute
     }
-    '/onboarding/review': {
-      id: '/onboarding/review'
+    '/onboarding/$id/review': {
+      id: '/onboarding/$id/review'
       path: '/review'
-      fullPath: '/onboarding/review'
-      preLoaderRoute: typeof OnboardingReviewRouteImport
-      parentRoute: typeof OnboardingRoute
+      fullPath: '/onboarding/$id/review'
+      preLoaderRoute: typeof OnboardingIdReviewRouteImport
+      parentRoute: typeof OnboardingIdRoute
     }
   }
 }
 
+interface OnboardingIdRouteChildren {
+  OnboardingIdBusinessRoute: typeof OnboardingIdBusinessRoute
+  OnboardingIdDocumentsRoute: typeof OnboardingIdDocumentsRoute
+  OnboardingIdDoneRoute: typeof OnboardingIdDoneRoute
+  OnboardingIdReviewRoute: typeof OnboardingIdReviewRoute
+  OnboardingIdIndexRoute: typeof OnboardingIdIndexRoute
+}
+
+const OnboardingIdRouteChildren: OnboardingIdRouteChildren = {
+  OnboardingIdBusinessRoute: OnboardingIdBusinessRoute,
+  OnboardingIdDocumentsRoute: OnboardingIdDocumentsRoute,
+  OnboardingIdDoneRoute: OnboardingIdDoneRoute,
+  OnboardingIdReviewRoute: OnboardingIdReviewRoute,
+  OnboardingIdIndexRoute: OnboardingIdIndexRoute,
+}
+
+const OnboardingIdRouteWithChildren = OnboardingIdRoute._addFileChildren(
+  OnboardingIdRouteChildren,
+)
+
 interface OnboardingRouteChildren {
+  OnboardingIdRoute: typeof OnboardingIdRouteWithChildren
   OnboardingBusinessRoute: typeof OnboardingBusinessRoute
-  OnboardingDocumentsRoute: typeof OnboardingDocumentsRoute
-  OnboardingDoneRoute: typeof OnboardingDoneRoute
-  OnboardingReviewRoute: typeof OnboardingReviewRoute
 }
 
 const OnboardingRouteChildren: OnboardingRouteChildren = {
+  OnboardingIdRoute: OnboardingIdRouteWithChildren,
   OnboardingBusinessRoute: OnboardingBusinessRoute,
-  OnboardingDocumentsRoute: OnboardingDocumentsRoute,
-  OnboardingDoneRoute: OnboardingDoneRoute,
-  OnboardingReviewRoute: OnboardingReviewRoute,
 }
 
 const OnboardingRouteWithChildren = OnboardingRoute._addFileChildren(

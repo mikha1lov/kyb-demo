@@ -1,22 +1,22 @@
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { useSelector } from '@tanstack/react-store'
+import { Navigate, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
 import { css } from 'styled-system/css'
 import { Badge } from '#/components/ui/Badge'
 import { Button } from '#/components/ui/Button'
 import { countryName } from '#/lib/countries'
-import { draft, reset } from '#/lib/draft'
+import { forgetApplication } from '#/lib/session'
+import { useApplication } from '#/lib/useApplication'
 
-export const Route = createFileRoute('/onboarding/done')({
-  beforeLoad: () => {
-    if (!draft.get().submittedAt) throw redirect({ to: '/onboarding/business' })
-  },
-  component: Done,
-})
+export const Route = createFileRoute('/onboarding/$id/done')({ component: Done })
 
 function Done() {
+  const application = useApplication()
   const navigate = useNavigate()
-  const business = useSelector(draft, (s) => s.business)
+  const { business } = application
+
+  if (application.status !== 'submitted') {
+    return <Navigate to="/onboarding/$id" params={{ id: application.id }} replace />
+  }
 
   return (
     <div className={css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6', py: '6', textAlign: 'center' })}>
@@ -52,7 +52,7 @@ function Done() {
         variant="secondary"
         size="lg"
         onClick={() => {
-          reset()
+          forgetApplication()
           void navigate({ to: '/onboarding/business' })
         }}
       >
