@@ -8,11 +8,12 @@ use axum::{
     routing::{get, post},
 };
 use chrono::Utc;
+use sqlx::PgPool;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
-    compare,
+    compare, db,
     domain::{Comparison, Extracted, Requirement, Typed},
     extractor::{DocumentExtractor, DocumentFile, ExtractError},
 };
@@ -22,6 +23,7 @@ const MAX_UPLOAD_BYTES: usize = 10 * 1024 * 1024;
 #[derive(Clone)]
 pub struct AppState {
     pub extractor: Arc<dyn DocumentExtractor>,
+    pub pool: PgPool,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -33,8 +35,10 @@ pub fn router(state: AppState) -> Router {
         .with_state(state)
 }
 
-async fn health() -> Json<serde_json::Value> {
-    Json(json!({"ok": true}))
+async fn health(State(state): State<AppState>) -> (StatusCode, Json<serde_json::Value>) {
+    let database = db::ping(&state.pool).await;
+    let status = if database { StatusCode::OK } else { StatusCode::SERVICE_UNAVAILABLE };
+    (status, Json(json!({"ok": database, "database": database})))
 }
 
 #[derive(Debug, thiserror::Error)]
