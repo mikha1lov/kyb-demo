@@ -41,6 +41,9 @@ export function CountrySelect({
       <Combobox.Control className={css({ position: 'relative' })}>
         <Combobox.Input
           placeholder="Select a country"
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
           aria-invalid={invalid || undefined}
           onBlur={onBlur}
           className={`${control} ${css({ pr: '10' })}`}
@@ -60,9 +63,10 @@ export function CountrySelect({
         </Combobox.Trigger>
       </Combobox.Control>
       <Portal>
-        <Combobox.Positioner className={css({ zIndex: 'popover' })}>
+        <Combobox.Positioner>
           <Combobox.Content
             className={css({
+              zIndex: 1000,
               maxH: '72',
               overflowY: 'auto',
               p: '1.5',

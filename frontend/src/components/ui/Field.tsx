@@ -50,6 +50,8 @@ export const control = css({
 export function TextInput({ invalid, className, ...rest }: InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }) {
   return (
     <input
+      data-1p-ignore
+      data-lpignore="true"
       {...rest}
       aria-invalid={invalid || undefined}
       className={[control, className].filter(Boolean).join(' ')}
