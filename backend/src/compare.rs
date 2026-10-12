@@ -6,7 +6,7 @@ use chrono::NaiveDate;
 use serde::Serialize;
 
 use crate::domain::{
-    Comparison, Extracted, Field, FieldCheck, Freshness, Issue, Requirement, Severity, Typed,
+    Comparison, DocKind, Extracted, Field, FieldCheck, Freshness, Issue, Requirement, Severity, Typed,
 };
 
 #[derive(Debug, Clone, Serialize)]
@@ -145,7 +145,11 @@ pub fn freshness(req: Requirement, doc: &Extracted, today: NaiveDate) -> Freshne
 pub fn compare(req: Requirement, typed: &Typed, doc: &Extracted, today: NaiveDate) -> Comparison {
     let kind_accepted = req.accepted_kinds().contains(&doc.kind);
     let legal_name = compare_name(typed.legal_name.as_deref(), &doc.legal_name);
-    let registration_number = compare_number(typed.registration_number.as_deref(), &doc.registration_number);
+    let registration_number = if matches!(doc.kind, DocKind::Registration | DocKind::BankStatement) {
+        compare_number(typed.registration_number.as_deref(), &doc.registration_number)
+    } else {
+        FieldCheck::NotChecked
+    };
     let address = compare_address(typed.address.as_deref(), &doc.address);
     let freshness = freshness(req, doc, today);
 
@@ -321,6 +325,21 @@ mod tests {
         assert_eq!(c.issues.len(), 1);
         assert_eq!(c.issues[0].code, "name_partial");
         assert_eq!(c.issues[0].severity, Severity::Blocking);
+    }
+
+    #[test]
+    fn a_utility_bill_account_number_is_not_compared_with_the_registration_number() {
+        let typed = Typed {
+            legal_name: Some("Tokoev Aliyar Bekovich".into()),
+            registration_number: Some("20000000000001".into()),
+            address: None,
+        };
+        let mut bill = doc(DocKind::UtilityBill);
+        bill.registration_number = f("00-000-0001");
+        bill.period_end = f("2026-09-30");
+        let c = compare(Requirement::ProofOfAddress, &typed, &bill, d(2026, 10, 12));
+        assert_eq!(c.registration_number, FieldCheck::NotChecked);
+        assert!(c.issues.is_empty());
     }
 
     #[test]
