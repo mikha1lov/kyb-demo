@@ -100,26 +100,3 @@ Repeat `-F requirement=...` to check one file against several requirements.
 What to expect: the recent statement covers source of funds and proof of address, the stale one gets flagged as too old for both, the utility bill covers proof of address only, the EIN letter counts as a registration document. The certificate carries a state file number and the letter and statement carry the EIN, which is why numbers are compared by type.
 
 The dates are relative to the day you run the script, so regenerate them when they get old.
-
-## Deploy
-
-`compose.prod.yaml` runs the same stack behind Caddy with HTTPS from Let's Encrypt and basic auth on everything. Only ports 22, 80 and 443 are open, and uploads are limited to six a minute per address. It needs a fresh Ubuntu box with 2 GB of RAM or more.
-
-```bash
-HOST=root@<server-ip>
-SITE=<server-ip with dashes>.sslip.io
-
-ssh $HOST 'bash -s' < deploy/bootstrap.sh
-git archive HEAD | ssh $HOST 'mkdir -p /opt/kyb && tar x -C /opt/kyb'
-ssh $HOST "bash /opt/kyb/deploy/provision.sh $SITE"
-ssh -t $HOST 'cd /opt/kyb && read -rsp "OpenAI key: " key && echo && sed -i "s|^OPENAI_API_KEY=.*|OPENAI_API_KEY=$key|" .env && docker compose -f compose.prod.yaml up -d --build'
-ssh $HOST 'cat /opt/kyb/.demo-credentials'
-```
-
-`bootstrap.sh` installs Docker, adds a 2 GB swap file (the Rust build needs it) and turns on the firewall. `provision.sh` writes `.env` with a random database password and creates the login in `.demo-credentials`. To update, send the archive again and run `docker compose -f compose.prod.yaml up -d --build` on the server.
-
-## Heads up
-
-- Use the test documents only. Whatever you upload goes to OpenAI.
-- Logs have sizes and outcomes, never document contents or extracted values.
-- Nothing here is hardened for the open internet: no auth beyond the basic auth in front of the demo, no upload scanning, no retention policy.
