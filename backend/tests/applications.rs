@@ -27,6 +27,7 @@ fn extracted(kind: DocKind, period_end: Option<String>, issued: Option<&str>) ->
         kind,
         legal_name: field(Some("TOKOEV ALIYAR BEKOVICH PE")),
         registration_number: field(Some("20000000000001")),
+        tax_number: field(None),
         address: field(Some("KYRGYZ REPUBLIC, BISHKEK, UL. TESTOVAYA 10, APT 5")),
         period_start: field(None),
         period_end: Field { value: period_end, confidence: 0.9, page: Some(1) },
@@ -42,6 +43,20 @@ impl DocumentExtractor for Stub {
         match file.filename.as_str() {
             "cert.pdf" => Ok(extracted(DocKind::Registration, None, Some("2023-03-14"))),
             "statement.pdf" => Ok(extracted(DocKind::BankStatement, Some(recent), None)),
+            "us-cert.pdf" => Ok(Extracted {
+                registration_number: field(Some("0000000001")),
+                ..extracted(DocKind::Registration, None, Some("2022-06-15"))
+            }),
+            "ein.pdf" => Ok(Extracted {
+                registration_number: field(None),
+                tax_number: field(Some("99-0000001")),
+                ..extracted(DocKind::Registration, None, Some("2026-09-02"))
+            }),
+            "us-statement.pdf" => Ok(Extracted {
+                registration_number: field(None),
+                tax_number: field(Some("99-0000001")),
+                ..extracted(DocKind::BankStatement, Some(recent), None)
+            }),
             "old.pdf" => Ok(extracted(DocKind::BankStatement, Some("2025-08-31".into()), None)),
             other => Err(ExtractError::Unsupported(other.into())),
         }
@@ -298,4 +313,30 @@ async fn a_details_value_that_is_too_short_is_rejected(pool: PgPool) {
     let (status, body) = json_call(&app, "PUT", &format!("/api/applications/{id}/business"), Some(payload)).await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(body["error"], "invalid_business");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn identifiers_of_different_types_do_not_conflict(pool: PgPool) {
+    let app = app(pool);
+    for chosen in ["99-0000001", "0000000001"] {
+        let payload = json!({"business": {"country": "us", "entityType": "llc"}});
+        let (_, body) = json_call(&app, "POST", "/api/applications", Some(payload)).await;
+        let id = body["id"].as_str().unwrap().to_string();
+        upload(&app, &id, "us-cert.pdf").await;
+        upload(&app, &id, "ein.pdf").await;
+        let (_, body) = upload(&app, &id, "us-statement.pdf").await;
+        assert_eq!(body["suggestions"]["registrationNumber"]["value"], "99-0000001");
+
+        let details = json!({"business": {
+            "country": "US",
+            "entityType": "llc",
+            "legalName": "TOKOEV ALIYAR BEKOVICH PE",
+            "registrationNumber": chosen,
+            "address": "KYRGYZ REPUBLIC, BISHKEK, UL. TESTOVAYA 10, APT 5"
+        }});
+        let (status, body) = json_call(&app, "PUT", &format!("/api/applications/{id}/business"), Some(details)).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body["requirementsMet"], true, "number {chosen}");
+        assert_eq!(body["complete"], true, "number {chosen}");
+    }
 }
