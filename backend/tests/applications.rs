@@ -50,7 +50,7 @@ impl DocumentExtractor for Stub {
             "ein.pdf" => Ok(Extracted {
                 registration_number: field(None),
                 tax_number: field(Some("99-0000001")),
-                ..extracted(DocKind::Registration, None, Some("2026-09-02"))
+                ..extracted(DocKind::TaxLetter, None, Some("2026-09-02"))
             }),
             "us-statement.pdf" => Ok(Extracted {
                 registration_number: field(None),
