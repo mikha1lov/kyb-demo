@@ -1,3 +1,4 @@
+pub mod application;
 pub mod compare;
 pub mod db;
 pub mod domain;
