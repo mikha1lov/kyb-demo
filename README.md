@@ -25,9 +25,9 @@ docker compose down -v      # drop the database volume too
 ## Layout
 
 ```
-backend/    Rust + Axum + sqlx. Analyze and compare endpoints; extraction behind a trait; comparison is pure and tested; migrations in backend/migrations
+backend/    Rust + Axum + sqlx. Applications API, document analysis behind a trait, pure comparison logic, migrations in backend/migrations
 fixtures/   Synthetic documents (fictional people, addresses, numbers) and the script that makes them
-frontend/   TanStack Start, TanStack Form, Zod, PandaCSS, Ark UI. Three-step onboarding with the document cross-check
+frontend/   TanStack Start, TanStack Form, Zod, PandaCSS, Ark UI. Three-step onboarding with the document cross-check; state lives on the server
 ```
 
 ## Run the backend
@@ -35,9 +35,11 @@ frontend/   TanStack Start, TanStack Form, Zod, PandaCSS, Ark UI. Three-step onb
 ```bash
 cd backend
 cp .env.example .env        # then put OPENAI_API_KEY in .env (the file is git-ignored)
-cargo test                  # 14 tests, no network needed
+cargo test                  # unit tests plus API tests that need Postgres
 cargo run                   # http://127.0.0.1:8787
 ```
+
+The API tests use a stub extractor and a real Postgres: start it with `docker compose up -d db` and export `DATABASE_URL` (see below) before `cargo test`. Each test gets its own throwaway database.
 
 Settings (environment or `backend/.env`): `DATABASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL` (default `gpt-5.4-mini`), `BIND_ADDR`. For local development without Docker for the backend, start only the database with `docker compose up -d db` and use `postgres://kyb:<password>@127.0.0.1:5433/kyb`.
 
@@ -51,7 +53,7 @@ npm run typecheck
 npm run build
 ```
 
-The proxy target is `http://127.0.0.1:8787`; set `API_URL` to change it. The draft is kept in localStorage.
+The proxy target is `http://127.0.0.1:8787`; set `API_URL` to change it. The server holds the application; the browser only remembers the id of the current one, and an application can be resumed from its URL (`/onboarding/<id>/...`).
 
 ## Try it
 
@@ -68,6 +70,19 @@ Requirements: `formation`, `source_of_funds` (max 180 days old), `proof_of_addre
 
 `POST /api/documents/compare` takes JSON `{requirements, typed, extracted}` and returns the same per-requirement results without calling the model.
 
+## Applications API
+
+| Method and path | What it does |
+|---|---|
+| `POST /api/applications` | create a draft from the business details |
+| `GET /api/applications/{id}` | the application with its documents, comparison results and requirement checklist |
+| `PUT /api/applications/{id}/business` | update the business details and the value sources |
+| `POST /api/applications/{id}/documents` | upload a document (multipart `file`); extracted fields are stored, the file is not |
+| `DELETE /api/applications/{id}/documents/{document}` | remove a document |
+| `POST /api/applications/{id}/submit` | submit when every requirement is met; the application is then locked |
+
+Errors are JSON `{error, message}`. Submitted applications answer `409 already_submitted` to any change. There is no authentication yet: the application id is an unguessable UUID and acts as the access key.
+
 ## Data and privacy
 
 - Use only the synthetic documents. Real passports, bank statements and tax numbers must not be sent to a third-party API.
@@ -78,4 +93,4 @@ Requirements: `formation`, `source_of_funds` (max 180 days old), `proof_of_addre
 
 - Comparison is deliberately separate from extraction: names are normalised (case, word order, legal-form words, Cyrillic to Latin, one-letter transliteration variants), and a missing patronymic is reported as `partial`, not as a mismatch.
 - Every extracted value carries a confidence and a page, so the UI can show where a value came from and ask a human about doubtful ones.
-- Postgres is connected and migrated on start, and `/api/health` reports the database. Applications are not persisted through the API yet; see `docs/plan.md`.
+- Applications, documents (extracted fields only) and the submitted state live in Postgres. See `docs/plan.md` for what is next.

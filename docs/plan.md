@@ -12,8 +12,8 @@ Last updated: 2026-10-12.
 | Backend: analyze and compare endpoints, extractor behind a trait | Done, 14 unit tests |
 | Frontend: business, documents, review, done | Done, verified in a browser on synthetic documents |
 | Containers: Dockerfiles, Compose, Postgres, nginx for the SPA | Done |
-| Persistence of applications | Schema and connection only; no API yet |
-| Case workflow, auth, local models | Not started |
+| Persistence of applications | Done: API, server-side state, resume by URL, locking after submit; 9 API tests on Postgres |
+| Prefill from documents, case workflow, auth, local models | Not started |
 
 ## Architecture today
 
@@ -24,16 +24,17 @@ browser -> web (nginx, static SPA) -> /api -> backend (Rust, Axum) -> db (Postgr
 ```
 
 - `web`: TanStack Start in SPA mode, built to static files, served by nginx; `/api` is proxied to the backend.
-- `backend`: Axum. `POST /api/documents/analyze` extracts fields and compares them with what the user typed; `POST /api/documents/compare` recomputes the comparison without calling the model; `GET /api/health` checks the database.
+- `backend`: Axum. Applications API (create, read, update business, upload and delete documents, submit); `POST /api/documents/analyze` and `/compare` stay as stateless tools; `GET /api/health` checks the database.
 - `db`: Postgres 17. Tables `applications` and `documents` exist; documents store extracted fields only, never the file.
 - The extractor is a trait, so a self-hosted model can replace OpenAI without touching the API or the UI.
 
 ## Milestones
 
-### M1. Persist applications
-- `POST /api/applications` creates a draft; `PATCH` updates business data and sources; `POST .../documents` stores extracted fields; `POST .../submit` locks the application; `GET` returns the current state.
-- The frontend reads and writes the server state; localStorage stays as a cache so a refresh is instant.
-- Done when a draft started in one browser can be resumed in another and a submitted application cannot be edited.
+### M1. Persist applications (done)
+- `POST /api/applications` creates a draft; `PUT .../business` updates business data and sources; `POST .../documents` stores extracted fields; `POST .../submit` locks the application; `GET` returns the state with comparison results and the requirement checklist computed on the server.
+- The frontend loads the application in route loaders; the browser keeps only the id of the current application, and an application resumes from its URL.
+- A submitted application answers 409 to any change; submitting needs every requirement met.
+- Left for later: authentication (M6); the id is the access key until then.
 
 ### M2. Prefill from documents
 - After an upload, offer to fill empty fields (name, registration number, address) from the document, with the source shown on each value.
@@ -78,4 +79,4 @@ browser -> web (nginx, static SPA) -> /api -> backend (Rust, Axum) -> db (Postgr
 - Extraction errors: every value carries a confidence and a page; low confidence goes to a human, never silently into the form.
 - A text comparison does not prove a document is genuine; authenticity checks stay with the verification provider.
 - Which duplicates belong to the provider and which to the product is unknown from the outside; it decides how much of M2 is possible.
-- Compose publishes only on `127.0.0.1`; nothing here is ready to be exposed to the internet before M6.
+- Compose publishes only on `127.0.0.1`; nothing here is ready to be exposed to the internet before M6. Until authentication exists, whoever has an application id can read and change that application.
