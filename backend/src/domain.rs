@@ -10,7 +10,8 @@ pub enum Requirement {
 }
 
 impl Requirement {
-    /// Maximum document age, if the provider sets one (days).
+    pub const ALL: [Requirement; 3] = [Self::Formation, Self::SourceOfFunds, Self::ProofOfAddress];
+
     pub fn max_age_days(self) -> Option<i64> {
         match self {
             Self::Formation => None,

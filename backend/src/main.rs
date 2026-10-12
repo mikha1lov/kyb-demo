@@ -1,32 +1,25 @@
-mod compare;
-mod db;
-mod domain;
-mod extractor;
-mod routes;
-
 use std::sync::Arc;
 
+use kyb_backend::{db, extractor::openai::OpenAiExtractor, routes};
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::EnvFilter;
 
-use crate::{extractor::openai::OpenAiExtractor, routes::AppState};
+fn required(name: &str) -> String {
+    std::env::var(name).unwrap_or_else(|_| {
+        eprintln!("{name} is not set. Put it in backend/.env (see .env.example).");
+        std::process::exit(1);
+    })
+}
 
 #[tokio::main]
 async fn main() {
-    // Reads backend/.env if present; real environment variables win.
     let _ = dotenvy::dotenv();
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
         .init();
 
-    let Ok(api_key) = std::env::var("OPENAI_API_KEY") else {
-        eprintln!("OPENAI_API_KEY is not set. Put it in backend/.env (see .env.example).");
-        std::process::exit(1);
-    };
-    let Ok(database_url) = std::env::var("DATABASE_URL") else {
-        eprintln!("DATABASE_URL is not set. Put it in backend/.env (see .env.example).");
-        std::process::exit(1);
-    };
+    let api_key = required("OPENAI_API_KEY");
+    let database_url = required("DATABASE_URL");
     let model = std::env::var("OPENAI_MODEL").unwrap_or_else(|_| "gpt-5.4-mini".into());
     let addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:8787".into());
 
@@ -38,9 +31,7 @@ async fn main() {
         }
     };
 
-    let state = AppState { extractor: Arc::new(OpenAiExtractor::new(api_key, model.clone())), pool };
-
-    // Local development only: the frontend runs on another port.
+    let state = routes::AppState { extractor: Arc::new(OpenAiExtractor::new(api_key, model.clone())), pool };
     let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
     let app = routes::router(state).layer(cors);
 

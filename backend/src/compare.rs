@@ -3,10 +3,24 @@
 //! Pure functions, no I/O: easy to test and to reuse behind any extractor.
 
 use chrono::NaiveDate;
+use serde::Serialize;
 
 use crate::domain::{
     Comparison, Extracted, Field, FieldCheck, Freshness, Issue, Requirement, Severity, Typed,
 };
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RequirementResult {
+    pub requirement: Requirement,
+    pub comparison: Comparison,
+}
+
+pub fn evaluate(requirements: &[Requirement], typed: &Typed, extracted: &Extracted, today: NaiveDate) -> Vec<RequirementResult> {
+    requirements
+        .iter()
+        .map(|&requirement| RequirementResult { requirement, comparison: compare(requirement, typed, extracted, today) })
+        .collect()
+}
 
 /// Legal-form words that do not identify a person or company.
 const LEGAL_FORM: &[&str] = &["pe", "ip", "ie", "llc", "ltd", "inc", "ooo", "osoo", "zao", "oao"];
