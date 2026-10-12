@@ -6,3 +6,5 @@ node_modules/
 dist/
 .output/
 .DS_Store
+deploy/auth.caddy
+.demo-credentials
