@@ -71,6 +71,10 @@ export default defineConfig({
             bg: { value: 'rgba(248, 113, 113, 0.1)' },
             border: { value: 'rgba(248, 113, 113, 0.28)' },
           },
+          action: {
+            primary: { value: '#f4f4f5' },
+            primaryHover: { value: '#ffffff' },
+          },
           focus: { value: '#e4e4e7' },
         },
         shadows: {
