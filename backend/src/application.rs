@@ -203,8 +203,9 @@ const MIN_SUGGESTION_CONFIDENCE: f32 = 0.7;
 fn authority(kind: DocKind) -> Option<u8> {
     match kind {
         DocKind::Registration => Some(0),
-        DocKind::BankStatement => Some(1),
-        DocKind::UtilityBill => Some(2),
+        DocKind::TaxLetter => Some(1),
+        DocKind::BankStatement => Some(2),
+        DocKind::UtilityBill => Some(3),
         _ => None,
     }
 }

@@ -198,7 +198,7 @@ pub fn compare(req: Requirement, typed: &Typed, doc: &Extracted, today: NaiveDat
 pub fn compare_with(req: Requirement, typed: &Typed, doc: &Extracted, today: NaiveDate, number_kind: NumberKind) -> Comparison {
     let kind_accepted = req.accepted_kinds().contains(&doc.kind);
     let legal_name = compare_name(typed.legal_name.as_deref(), &doc.legal_name);
-    let registration_number = if matches!(doc.kind, DocKind::Registration | DocKind::BankStatement) {
+    let registration_number = if matches!(doc.kind, DocKind::Registration | DocKind::TaxLetter | DocKind::BankStatement) {
         compare_number(typed.registration_number.as_deref(), doc, number_kind)
     } else {
         FieldCheck::NotChecked
@@ -426,6 +426,19 @@ mod tests {
         let c = compare(Requirement::ProofOfAddress, &typed, &bill, d(2026, 10, 12));
         assert_eq!(c.registration_number, FieldCheck::NotChecked);
         assert!(c.issues.is_empty());
+    }
+
+    #[test]
+    fn a_tax_letter_covers_the_registration_requirement() {
+        let typed = Typed { legal_name: None, registration_number: Some("99-0000001".into()), address: None };
+        let c = compare(Requirement::Formation, &typed, &us_ein_letter_as(DocKind::TaxLetter), d(2026, 10, 12));
+        assert!(c.kind_accepted);
+        assert_eq!(c.registration_number, FieldCheck::Match);
+        assert!(c.issues.is_empty());
+    }
+
+    fn us_ein_letter_as(kind: DocKind) -> Extracted {
+        Extracted { kind, ..us_ein_letter() }
     }
 
     #[test]

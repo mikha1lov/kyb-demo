@@ -22,7 +22,7 @@ impl Requirement {
 
     pub fn accepted_kinds(self) -> &'static [DocKind] {
         match self {
-            Self::Formation => &[DocKind::Registration],
+            Self::Formation => &[DocKind::Registration, DocKind::TaxLetter],
             Self::SourceOfFunds => &[DocKind::BankStatement],
             Self::ProofOfAddress => &[DocKind::BankStatement, DocKind::UtilityBill],
         }
@@ -33,6 +33,7 @@ impl Requirement {
 #[serde(rename_all = "snake_case")]
 pub enum DocKind {
     Registration,
+    TaxLetter,
     BankStatement,
     UtilityBill,
     Contract,
