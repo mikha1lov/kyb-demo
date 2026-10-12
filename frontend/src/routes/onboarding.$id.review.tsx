@@ -28,7 +28,8 @@ function ReviewStep() {
 
   if (application.status === 'submitted') return <Navigate to="/onboarding/$id/done" params={params} replace />
   if (!business) return <Navigate to="/onboarding/$id/business" params={params} replace />
-  if (!application.complete) return <Navigate to="/onboarding/$id/documents" params={params} replace />
+  if (!application.requirementsMet) return <Navigate to="/onboarding/$id/documents" params={params} replace />
+  if (!application.businessComplete) return <Navigate to="/onboarding/$id/details" params={params} replace />
 
   const country = countries.find((c) => c.code === business.country)
 
@@ -50,7 +51,7 @@ function ReviewStep() {
       title="Review"
       footer={
         <>
-          <Button variant="secondary" size="lg" onClick={() => navigate({ to: '/onboarding/$id/documents', params })}>
+          <Button variant="secondary" size="lg" onClick={() => navigate({ to: '/onboarding/$id/details', params })}>
             Back
           </Button>
           <Button size="lg" className={css({ flex: 1 })} loading={submitting} onClick={submit}>
@@ -59,7 +60,7 @@ function ReviewStep() {
         </>
       }
     >
-      <Section title="Business" to="/onboarding/$id/business" id={application.id}>
+      <Section title="Business" to="/onboarding/$id/details" id={application.id}>
         <Row label="Country">
           <span aria-hidden>{flag(business.country)}</span>
           {country?.name ?? business.country}

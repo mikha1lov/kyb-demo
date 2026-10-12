@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { BusinessForm } from '#/components/BusinessForm'
+import { CompanyForm } from '#/components/CompanyForm'
 import { createApplication } from '#/lib/api'
 import { currentApplication, rememberApplication } from '#/lib/session'
 
@@ -15,10 +15,10 @@ function NewApplication() {
   const navigate = useNavigate()
 
   return (
-    <BusinessForm
+    <CompanyForm
       initial={null}
-      onSubmit={async (business) => {
-        const application = await createApplication(business)
+      onSubmit={async (company) => {
+        const application = await createApplication({ ...company, legalName: '', registrationNumber: '', address: '' })
         rememberApplication(application.id)
         await navigate({ to: '/onboarding/$id/documents', params: { id: application.id } })
       }}

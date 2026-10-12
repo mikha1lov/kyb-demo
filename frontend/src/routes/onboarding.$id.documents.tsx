@@ -73,8 +73,8 @@ function DocumentsStep() {
           <Button
             size="lg"
             className={css({ flex: 1 })}
-            disabled={!application.complete || uploading}
-            onClick={() => navigate({ to: '/onboarding/$id/review', params })}
+            disabled={!application.requirementsMet || uploading}
+            onClick={() => navigate({ to: '/onboarding/$id/details', params })}
           >
             Continue
           </Button>

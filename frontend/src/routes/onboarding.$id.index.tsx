@@ -9,6 +9,7 @@ function Resume() {
 
   if (application.status === 'submitted') return <Navigate to="/onboarding/$id/done" params={params} replace />
   if (!application.business) return <Navigate to="/onboarding/$id/business" params={params} replace />
-  if (application.complete) return <Navigate to="/onboarding/$id/review" params={params} replace />
-  return <Navigate to="/onboarding/$id/documents" params={params} replace />
+  if (!application.requirementsMet) return <Navigate to="/onboarding/$id/documents" params={params} replace />
+  if (!application.businessComplete) return <Navigate to="/onboarding/$id/details" params={params} replace />
+  return <Navigate to="/onboarding/$id/review" params={params} replace />
 }

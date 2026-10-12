@@ -15,6 +15,7 @@ import { Route as OnboardingIdRouteImport } from './routes/onboarding.$id'
 import { Route as OnboardingBusinessRouteImport } from './routes/onboarding.business'
 import { Route as OnboardingIdIndexRouteImport } from './routes/onboarding.$id.index'
 import { Route as OnboardingIdBusinessRouteImport } from './routes/onboarding.$id.business'
+import { Route as OnboardingIdDetailsRouteImport } from './routes/onboarding.$id.details'
 import { Route as OnboardingIdDocumentsRouteImport } from './routes/onboarding.$id.documents'
 import { Route as OnboardingIdDoneRouteImport } from './routes/onboarding.$id.done'
 import { Route as OnboardingIdReviewRouteImport } from './routes/onboarding.$id.review'
@@ -49,6 +50,11 @@ const OnboardingIdBusinessRoute = OnboardingIdBusinessRouteImport.update({
   path: '/business',
   getParentRoute: () => OnboardingIdRoute,
 } as any)
+const OnboardingIdDetailsRoute = OnboardingIdDetailsRouteImport.update({
+  id: '/details',
+  path: '/details',
+  getParentRoute: () => OnboardingIdRoute,
+} as any)
 const OnboardingIdDocumentsRoute = OnboardingIdDocumentsRouteImport.update({
   id: '/documents',
   path: '/documents',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/$id': typeof OnboardingIdRouteWithChildren
   '/onboarding/business': typeof OnboardingBusinessRoute
   '/onboarding/$id/business': typeof OnboardingIdBusinessRoute
+  '/onboarding/$id/details': typeof OnboardingIdDetailsRoute
   '/onboarding/$id/documents': typeof OnboardingIdDocumentsRoute
   '/onboarding/$id/done': typeof OnboardingIdDoneRoute
   '/onboarding/$id/review': typeof OnboardingIdReviewRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRouteWithChildren
   '/onboarding/business': typeof OnboardingBusinessRoute
   '/onboarding/$id/business': typeof OnboardingIdBusinessRoute
+  '/onboarding/$id/details': typeof OnboardingIdDetailsRoute
   '/onboarding/$id/documents': typeof OnboardingIdDocumentsRoute
   '/onboarding/$id/done': typeof OnboardingIdDoneRoute
   '/onboarding/$id/review': typeof OnboardingIdReviewRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/onboarding/$id': typeof OnboardingIdRouteWithChildren
   '/onboarding/business': typeof OnboardingBusinessRoute
   '/onboarding/$id/business': typeof OnboardingIdBusinessRoute
+  '/onboarding/$id/details': typeof OnboardingIdDetailsRoute
   '/onboarding/$id/documents': typeof OnboardingIdDocumentsRoute
   '/onboarding/$id/done': typeof OnboardingIdDoneRoute
   '/onboarding/$id/review': typeof OnboardingIdReviewRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/onboarding/$id'
     | '/onboarding/business'
     | '/onboarding/$id/business'
+    | '/onboarding/$id/details'
     | '/onboarding/$id/documents'
     | '/onboarding/$id/done'
     | '/onboarding/$id/review'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/onboarding/business'
     | '/onboarding/$id/business'
+    | '/onboarding/$id/details'
     | '/onboarding/$id/documents'
     | '/onboarding/$id/done'
     | '/onboarding/$id/review'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/onboarding/$id'
     | '/onboarding/business'
     | '/onboarding/$id/business'
+    | '/onboarding/$id/details'
     | '/onboarding/$id/documents'
     | '/onboarding/$id/done'
     | '/onboarding/$id/review'
@@ -182,6 +194,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingIdBusinessRouteImport
       parentRoute: typeof OnboardingIdRoute
     }
+    '/onboarding/$id/details': {
+      id: '/onboarding/$id/details'
+      path: '/details'
+      fullPath: '/onboarding/$id/details'
+      preLoaderRoute: typeof OnboardingIdDetailsRouteImport
+      parentRoute: typeof OnboardingIdRoute
+    }
     '/onboarding/$id/documents': {
       id: '/onboarding/$id/documents'
       path: '/documents'
@@ -208,6 +227,7 @@ declare module '@tanstack/react-router' {
 
 interface OnboardingIdRouteChildren {
   OnboardingIdBusinessRoute: typeof OnboardingIdBusinessRoute
+  OnboardingIdDetailsRoute: typeof OnboardingIdDetailsRoute
   OnboardingIdDocumentsRoute: typeof OnboardingIdDocumentsRoute
   OnboardingIdDoneRoute: typeof OnboardingIdDoneRoute
   OnboardingIdReviewRoute: typeof OnboardingIdReviewRoute
@@ -216,6 +236,7 @@ interface OnboardingIdRouteChildren {
 
 const OnboardingIdRouteChildren: OnboardingIdRouteChildren = {
   OnboardingIdBusinessRoute: OnboardingIdBusinessRoute,
+  OnboardingIdDetailsRoute: OnboardingIdDetailsRoute,
   OnboardingIdDocumentsRoute: OnboardingIdDocumentsRoute,
   OnboardingIdDoneRoute: OnboardingIdDoneRoute,
   OnboardingIdReviewRoute: OnboardingIdReviewRoute,

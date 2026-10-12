@@ -1,26 +1,26 @@
 import { Navigate, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { BusinessForm } from '#/components/BusinessForm'
+import { CompanyForm } from '#/components/CompanyForm'
 import { saveBusiness } from '#/lib/api'
-import { keepSources } from '#/lib/sources'
 import { useApplication, useReload } from '#/lib/useApplication'
 
-export const Route = createFileRoute('/onboarding/$id/business')({ component: EditBusiness })
+export const Route = createFileRoute('/onboarding/$id/business')({ component: EditCompany })
 
-function EditBusiness() {
+function EditCompany() {
   const application = useApplication()
   const reload = useReload()
   const navigate = useNavigate()
+  const { business } = application
 
   if (application.status === 'submitted') {
     return <Navigate to="/onboarding/$id/done" params={{ id: application.id }} replace />
   }
+  if (!business) return null
 
   return (
-    <BusinessForm
-      initial={application.business}
-      onSubmit={async (business) => {
-        const sources = keepSources(application.business, business, application.sources)
-        await saveBusiness(application.id, business, sources)
+    <CompanyForm
+      initial={{ country: business.country, entityType: business.entityType }}
+      onSubmit={async (company) => {
+        await saveBusiness(application.id, { ...business, ...company }, application.sources)
         await reload()
         await navigate({ to: '/onboarding/$id/documents', params: { id: application.id } })
       }}
