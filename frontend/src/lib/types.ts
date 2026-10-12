@@ -1,6 +1,6 @@
 import type { Business, Requirement } from './schema'
 
-export type DocKind = 'registration' | 'bank_statement' | 'utility_bill' | 'contract' | 'invoice' | 'other'
+export type DocKind = 'registration' | 'tax_letter' | 'bank_statement' | 'utility_bill' | 'contract' | 'invoice' | 'other'
 
 export type ExtractedField = { value: string | null; confidence: number; page: number | null }
 
@@ -49,6 +49,7 @@ export type RequirementResult = { requirement: Requirement; comparison: Comparis
 
 export const docKindLabels: Record<DocKind, string> = {
   registration: 'Registration certificate',
+  tax_letter: 'Tax letter',
   bank_statement: 'Bank statement',
   utility_bill: 'Utility bill',
   contract: 'Contract',
