@@ -13,7 +13,8 @@ Last updated: 2026-10-12.
 | Frontend: business, documents, review, done | Done, verified in a browser on synthetic documents |
 | Containers: Dockerfiles, Compose, Postgres, nginx for the SPA | Done |
 | Persistence of applications | Done: API, server-side state, resume by URL, locking after submit; 9 API tests on Postgres |
-| Prefill from documents, case workflow, auth, local models | Not started |
+| Prefill from documents | Done: details come from the documents, the number and the address are typed zero times when the documents are readable |
+| Case workflow, auth, local models | Not started |
 
 ## Architecture today
 
@@ -36,10 +37,12 @@ browser -> web (nginx, static SPA) -> /api -> backend (Rust, Axum) -> db (Postgr
 - A submitted application answers 409 to any change; submitting needs every requirement met.
 - Left for later: authentication (M6); the id is the access key until then.
 
-### M2. Prefill from documents
-- After an upload, offer to fill empty fields (name, registration number, address) from the document, with the source shown on each value.
-- Registration number is asked once; operating address defaults to "same as registered".
-- Done when a sole proprietor completes the flow typing the number and the address at most once.
+### M2. Prefill from documents (done)
+- The flow now runs company, documents, details, review. The company step asks only the country and the entity type; the details step opens already filled from the documents, with a "From document" tag on every value that matches the suggestion.
+- The server picks suggestions from the registration certificate first, then bank statements, then utility bills, ignoring values read with low confidence.
+- A suggestion that the user edits loses its tag; going back and forth keeps the tags that still apply.
+- The registration number and the address are asked once in the prototype, so the "operating address same as registered" toggle is not needed here; it belongs to the real flow that asks the address four times.
+- Done when a sole proprietor completes the flow typing the number and the address at most once: with readable documents they type neither.
 
 ### M3. Errors and review
 - Field-level errors, limits shown before typing (200 characters, 90 days), review screen with differences highlighted.

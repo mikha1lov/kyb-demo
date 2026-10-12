@@ -27,7 +27,7 @@ docker compose down -v      # drop the database volume too
 ```
 backend/    Rust + Axum + sqlx. Applications API, document analysis behind a trait, pure comparison logic, migrations in backend/migrations
 fixtures/   Synthetic documents (fictional people, addresses, numbers) and the script that makes them
-frontend/   TanStack Start, TanStack Form, Zod, PandaCSS, Ark UI. Three-step onboarding with the document cross-check; state lives on the server
+frontend/   TanStack Start, TanStack Form, Zod, PandaCSS, Ark UI. Onboarding in four steps (company, documents, details, review) where the details are prefilled from the documents; state lives on the server
 ```
 
 ## Run the backend
@@ -74,14 +74,14 @@ Requirements: `formation`, `source_of_funds` (max 180 days old), `proof_of_addre
 
 | Method and path | What it does |
 |---|---|
-| `POST /api/applications` | create a draft from the business details |
-| `GET /api/applications/{id}` | the application with its documents, comparison results and requirement checklist |
+| `POST /api/applications` | create a draft from the country and the entity type; name, number and address may be left out |
+| `GET /api/applications/{id}` | the application with its documents, comparison results, requirement checklist and `suggestions` (name, number, address taken from the documents) |
 | `PUT /api/applications/{id}/business` | update the business details and the value sources |
 | `POST /api/applications/{id}/documents` | upload a document (multipart `file`); extracted fields are stored, the file is not |
 | `DELETE /api/applications/{id}/documents/{document}` | remove a document |
-| `POST /api/applications/{id}/submit` | submit when every requirement is met; the application is then locked |
+| `POST /api/applications/{id}/submit` | submit when every document requirement is met and the details are filled in; the application is then locked |
 
-Errors are JSON `{error, message}`. Submitted applications answer `409 already_submitted` to any change. There is no authentication yet: the application id is an unguessable UUID and acts as the access key.
+Suggestions come from registration certificates first, then bank statements, then utility bills, and only for values read with confidence of 0.7 or more. Errors are JSON `{error, message}`. Submitted applications answer `409 already_submitted` to any change. There is no authentication yet: the application id is an unguessable UUID and acts as the access key.
 
 ## Data and privacy
 
