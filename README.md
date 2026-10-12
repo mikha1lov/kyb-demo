@@ -66,6 +66,21 @@ curl -s http://127.0.0.1:8787/api/documents/analyze \
   -F 'typed={"legalName":"Aliyar Tokoev PE","registrationNumber":"20000000000001"}'
 ```
 
+Test documents in `fixtures/out/`, with the company they describe:
+
+| File | Company | What it is | Expected result |
+|---|---|---|---|
+| `registration_certificate.pdf` | Kyrgyz sole proprietor | registration certificate | covers the registration requirement |
+| `bank_statement_recent.pdf` | Kyrgyz sole proprietor | statement, last 3 months | covers source of funds and proof of address |
+| `bank_statement_stale.pdf` | Kyrgyz sole proprietor | statement, over a year old | flagged as too old for both requirements |
+| `us_certificate_of_formation.pdf` | Texas LLC | certificate of formation | covers the registration requirement; its file number is not the EIN |
+| `us_ein_letter.pdf` | Texas LLC | EIN assignment letter | counted as a registration document; carries the EIN |
+| `us_bank_statement_recent.pdf` | Texas LLC | statement, last 3 months, name written "Acme Test Holdings, LLC" | covers source of funds and proof of address; the name still matches |
+| `us_bank_statement_stale.pdf` | Texas LLC | statement, over a year old | flagged as too old |
+| `us_utility_bill.pdf` | Texas LLC | electricity bill | covers proof of address only |
+
+The recent statement and the bill carry dates relative to the day the script ran; run `python3 fixtures/generate.py` again when they get old.
+
 Requirements: `formation`, `source_of_funds` (max 180 days old), `proof_of_address` (max 90 days). Repeat `-F requirement=...` to test one upload against several; the response has one result per requirement.
 
 `POST /api/documents/compare` takes JSON `{requirements, typed, extracted}` and returns the same per-requirement results without calling the model.
