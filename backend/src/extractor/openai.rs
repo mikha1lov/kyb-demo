@@ -1,5 +1,3 @@
-//! OpenAI Responses API with a strict JSON schema.
-//! Documents are sent as base64 data URLs and `store` is false: nothing is kept on the provider side.
 
 use async_trait::async_trait;
 use base64::{Engine, engine::general_purpose::STANDARD};
@@ -89,7 +87,6 @@ fn file_part(file: &DocumentFile) -> Result<Value, ExtractError> {
     }
 }
 
-/// Pull the model's text out of a Responses API answer.
 fn answer_text(body: &Value) -> Option<&str> {
     body.get("output")?
         .as_array()?

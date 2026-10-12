@@ -1,5 +1,3 @@
-//! Document extraction behind a trait, so the provider can be swapped
-//! (OpenAI now, a self-hosted model later) without touching the rest.
 
 use async_trait::async_trait;
 
@@ -28,6 +26,5 @@ pub enum ExtractError {
 #[async_trait]
 pub trait DocumentExtractor: Send + Sync {
     async fn extract(&self, file: DocumentFile) -> Result<Extracted, ExtractError>;
-    /// Short label of the provider and model, for the response and for logs.
     fn label(&self) -> String;
 }

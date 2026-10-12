@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-/// What the user is trying to prove with an upload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Requirement {
@@ -41,7 +40,6 @@ pub enum DocKind {
     Other,
 }
 
-/// One extracted value with where it came from and how sure the model is.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Field {
     pub value: Option<String>,
@@ -64,7 +62,6 @@ pub struct Extracted {
     pub notes: Option<String>,
 }
 
-/// What the user typed earlier in the form.
 #[derive(Debug, Default, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Typed {
@@ -76,17 +73,13 @@ pub struct Typed {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "status", rename_all = "snake_case", rename_all_fields = "camelCase")]
 pub enum FieldCheck {
-    /// Same after normalisation.
     Match,
-    /// Overlap, but one side has words the other lacks (for example a patronymic).
     Partial {
         missing_in_typed: Vec<String>,
         missing_in_document: Vec<String>,
     },
     Mismatch,
-    /// The document does not contain this field.
     NotFound,
-    /// Nothing typed to compare with.
     NotChecked,
 }
 
@@ -95,7 +88,6 @@ pub enum FieldCheck {
 pub enum Freshness {
     Fresh { age_days: i64, max_days: i64 },
     Stale { age_days: i64, max_days: i64 },
-    /// The document shows no usable date.
     Unknown,
     NotRequired,
 }
