@@ -5,6 +5,7 @@ use async_trait::async_trait;
 
 use crate::domain::Extracted;
 
+pub mod openai;
 
 pub struct DocumentFile {
     pub filename: String,
