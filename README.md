@@ -4,8 +4,6 @@ Prototype of a KYB onboarding flow that reads documents at upload time. You drop
 
 Rust (Axum, sqlx) and Postgres on the back, TanStack Start with PandaCSS on the front, OpenAI for reading the documents.
 
-The notes on the original flow that this came from are in `docs/`. The roadmap is `docs/plan.md`.
-
 ## Quick start
 
 You need Docker and an OpenAI key.
@@ -124,4 +122,4 @@ ssh $HOST 'cat /opt/kyb/.demo-credentials'
 
 - Use the fake documents only. Whatever you upload goes to OpenAI.
 - Logs have sizes and outcomes, never document contents or extracted values.
-- Nothing here is hardened for the open internet. See `docs/plan.md` for what's missing.
+- Nothing here is hardened for the open internet: no auth beyond the basic auth in front of the demo, no upload scanning, no retention policy.
