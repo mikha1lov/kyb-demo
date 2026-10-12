@@ -1,0 +1,8 @@
+node_modules
+dist
+.output
+.tanstack
+styled-system
+.env
+.env.*
+.git
