@@ -1,7 +1,2 @@
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
+@layer reset, base, tokens, recipes, utilities;
+@import '@fontsource-variable/inter';
