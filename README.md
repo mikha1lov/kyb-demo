@@ -37,7 +37,7 @@ curl -s http://127.0.0.1:8787/api/documents/analyze \
   -F 'typed={"legalName":"Aliyar Tokoev PE","registrationNumber":"20000000000001"}'
 ```
 
-Requirements: `formation`, `source_of_funds` (max 180 days old), `proof_of_address` (max 90 days).
+Requirements: `formation`, `source_of_funds` (max 180 days old), `proof_of_address` (max 90 days). Repeat `-F requirement=...` to test one upload against several; the response has one result per requirement.
 
 ## Data and privacy
 

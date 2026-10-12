@@ -58,20 +58,26 @@ impl IntoResponse for ApiError {
 }
 
 #[derive(Serialize)]
+struct RequirementResult {
+    requirement: Requirement,
+    comparison: Comparison,
+}
+
+#[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AnalyzeResponse {
     extractor: String,
     extracted: Extracted,
-    comparison: Comparison,
+    results: Vec<RequirementResult>,
 }
 
 /// multipart/form-data:
 ///   file         the document (pdf, png, jpeg, webp, up to 10 MB)
-///   requirement  formation | source_of_funds | proof_of_address
+///   requirement  formation | source_of_funds | proof_of_address (repeat the field for several)
 ///   typed        JSON with what the user typed: {"legalName": "...", "registrationNumber": "...", "address": "..."}
 async fn analyze(State(state): State<AppState>, mut form: Multipart) -> Result<Json<AnalyzeResponse>, ApiError> {
     let mut file: Option<DocumentFile> = None;
-    let mut requirement: Option<Requirement> = None;
+    let mut requirements: Vec<Requirement> = Vec::new();
     let mut typed = Typed::default();
 
     while let Some(field) = form.next_field().await.map_err(|e| ApiError::BadRequest(e.to_string()))? {
@@ -87,7 +93,7 @@ async fn analyze(State(state): State<AppState>, mut form: Multipart) -> Result<J
             }
             "requirement" => {
                 let text = field.text().await.map_err(|e| ApiError::BadRequest(e.to_string()))?;
-                requirement = Some(
+                requirements.push(
                     serde_json::from_value(json!(text.trim()))
                         .map_err(|_| ApiError::BadRequest("unknown requirement".into()))?,
                 );
@@ -101,14 +107,23 @@ async fn analyze(State(state): State<AppState>, mut form: Multipart) -> Result<J
     }
 
     let file = file.ok_or_else(|| ApiError::BadRequest("file is required".into()))?;
-    let requirement = requirement.ok_or_else(|| ApiError::BadRequest("requirement is required".into()))?;
+    if requirements.is_empty() {
+        return Err(ApiError::BadRequest("requirement is required".into()));
+    }
 
     // Log sizes and outcome only, never document contents or extracted values.
-    tracing::info!(bytes = file.bytes.len(), mime = %file.mime, ?requirement, "analyzing document");
+    tracing::info!(bytes = file.bytes.len(), mime = %file.mime, ?requirements, "analyzing document");
 
     let extracted = state.extractor.extract(file).await?;
-    let comparison = compare::compare(requirement, &typed, &extracted, Utc::now().date_naive());
-    tracing::info!(issues = comparison.issues.len(), "document analysed");
+    let today = Utc::now().date_naive();
+    let results: Vec<RequirementResult> = requirements
+        .iter()
+        .map(|&requirement| RequirementResult {
+            requirement,
+            comparison: compare::compare(requirement, &typed, &extracted, today),
+        })
+        .collect();
+    tracing::info!(requirements = results.len(), "document analysed");
 
-    Ok(Json(AnalyzeResponse { extractor: state.extractor.label(), extracted, comparison }))
+    Ok(Json(AnalyzeResponse { extractor: state.extractor.label(), extracted, results }))
 }
