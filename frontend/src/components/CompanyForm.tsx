@@ -3,14 +3,14 @@ import { useState } from 'react'
 import { css } from 'styled-system/css'
 import { Button } from '#/components/ui/Button'
 import { CountrySelect } from '#/components/ui/CountrySelect'
-import { Field, TextInput } from '#/components/ui/Field'
+import { Field } from '#/components/ui/Field'
 import { Segmented } from '#/components/ui/Segmented'
-import { businessSchema, entityTypeLabels, entityTypes, type Business } from '#/lib/schema'
+import { companySchema, entityTypeLabels, entityTypes, type Company } from '#/lib/schema'
 import { StepLayout } from './StepLayout'
 
 const entityOptions = entityTypes.map((value) => ({ value, label: entityTypeLabels[value] }))
 
-const blank: Business = { country: '', entityType: 'sole_proprietor', legalName: '', registrationNumber: '', address: '' }
+const blank: Company = { country: '', entityType: 'sole_proprietor' }
 
 function messageOf(errors: unknown[]) {
   const first = errors.find(Boolean) as { message?: string } | string | undefined
@@ -27,22 +27,22 @@ function showError(field: Validated) {
   return visible ? messageOf(field.state.meta.errors) : undefined
 }
 
-export function BusinessForm({
+export function CompanyForm({
   initial,
   onSubmit,
 }: {
-  initial: Business | null
-  onSubmit: (business: Business) => Promise<void>
+  initial: Company | null
+  onSubmit: (company: Company) => Promise<void>
 }) {
   const [failure, setFailure] = useState<string | null>(null)
 
   const form = useForm({
     defaultValues: initial ?? blank,
-    validators: { onChange: businessSchema, onSubmit: businessSchema },
+    validators: { onChange: companySchema, onSubmit: companySchema },
     onSubmit: async ({ value }) => {
       setFailure(null)
       try {
-        await onSubmit(businessSchema.parse(value))
+        await onSubmit(companySchema.parse(value))
       } catch (error) {
         setFailure(error instanceof Error ? error.message : 'Something went wrong')
       }
@@ -58,7 +58,7 @@ export function BusinessForm({
       }}
     >
       <StepLayout
-        title="Business details"
+        title="Company"
         footer={
           <form.Subscribe selector={(state) => state.isSubmitting}>
             {(submitting) => (
@@ -86,49 +86,6 @@ export function BusinessForm({
           {(field) => (
             <Field label="Entity type">
               <Segmented name="entityType" value={field.state.value} options={entityOptions} onChange={field.handleChange} />
-            </Field>
-          )}
-        </form.Field>
-        <form.Field name="legalName">
-          {(field) => (
-            <Field label="Legal name" htmlFor="legalName" error={showError(field)}>
-              <TextInput
-                id="legalName"
-                autoComplete="organization"
-                value={field.state.value}
-                invalid={showError(field) !== undefined}
-                onChange={(event) => field.handleChange(event.target.value)}
-                onBlur={field.handleBlur}
-              />
-            </Field>
-          )}
-        </form.Field>
-        <form.Field name="registrationNumber">
-          {(field) => (
-            <Field label="Registration number" htmlFor="registrationNumber" error={showError(field)}>
-              <TextInput
-                id="registrationNumber"
-                inputMode="numeric"
-                autoComplete="off"
-                value={field.state.value}
-                invalid={showError(field) !== undefined}
-                onChange={(event) => field.handleChange(event.target.value)}
-                onBlur={field.handleBlur}
-              />
-            </Field>
-          )}
-        </form.Field>
-        <form.Field name="address">
-          {(field) => (
-            <Field label="Registered address" htmlFor="address" error={showError(field)}>
-              <TextInput
-                id="address"
-                autoComplete="street-address"
-                value={field.state.value}
-                invalid={showError(field) !== undefined}
-                onChange={(event) => field.handleChange(event.target.value)}
-                onBlur={field.handleBlur}
-              />
             </Field>
           )}
         </form.Field>
