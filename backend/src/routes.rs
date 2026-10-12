@@ -57,9 +57,13 @@ struct CompareResponse {
     results: Vec<RequirementResult>,
 }
 
+fn evaluate_alone(requirements: &[Requirement], typed: &Typed, extracted: &Extracted) -> Vec<RequirementResult> {
+    let kind = compare::number_kind(typed.registration_number.as_deref(), &[extracted]);
+    compare::evaluate(requirements, typed, extracted, Utc::now().date_naive(), kind)
+}
+
 async fn compare_again(Json(request): Json<CompareRequest>) -> Json<CompareResponse> {
-    let results = compare::evaluate(&request.requirements, &request.typed, &request.extracted, Utc::now().date_naive());
-    Json(CompareResponse { results })
+    Json(CompareResponse { results: evaluate_alone(&request.requirements, &request.typed, &request.extracted) })
 }
 
 #[derive(Serialize)]
@@ -109,7 +113,7 @@ async fn analyze(State(state): State<AppState>, mut form: Multipart) -> Result<J
     tracing::info!(bytes = file.bytes.len(), mime = %file.mime, ?requirements, "analyzing document");
 
     let extracted = state.extractor.extract(file).await?;
-    let results = compare::evaluate(&requirements, &typed, &extracted, Utc::now().date_naive());
+    let results = evaluate_alone(&requirements, &typed, &extracted);
     tracing::info!(requirements = results.len(), "document analysed");
 
     Ok(Json(AnalyzeResponse { extractor: state.extractor.label(), extracted, results }))

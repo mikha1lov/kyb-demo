@@ -1,6 +1,3 @@
-//! Compare what the user typed with what a document says.
-//!
-//! Pure functions, no I/O: easy to test and to reuse behind any extractor.
 
 use chrono::NaiveDate;
 use serde::Serialize;
@@ -15,12 +12,7 @@ pub struct RequirementResult {
     pub comparison: Comparison,
 }
 
-pub fn evaluate(requirements: &[Requirement], typed: &Typed, extracted: &Extracted, today: NaiveDate) -> Vec<RequirementResult> {
-    let kind = number_kind(typed.registration_number.as_deref(), &[extracted]);
-    evaluate_with(requirements, typed, extracted, today, kind)
-}
-
-pub fn evaluate_with(
+pub fn evaluate(
     requirements: &[Requirement],
     typed: &Typed,
     extracted: &Extracted,
@@ -31,7 +23,7 @@ pub fn evaluate_with(
         .iter()
         .map(|&requirement| RequirementResult {
             requirement,
-            comparison: compare_with(requirement, typed, extracted, today, kind),
+            comparison: compare(requirement, typed, extracted, today, kind),
         })
         .collect()
 }
@@ -43,10 +35,8 @@ pub enum NumberKind {
     Unknown,
 }
 
-/// Legal-form words that do not identify a person or company.
 const LEGAL_FORM: &[&str] = &["pe", "ip", "ie", "llc", "ltd", "inc", "ooo", "osoo", "zao", "oao"];
 
-/// Address words that differ between writings of the same address.
 const ADDRESS_NOISE: &[&str] = &[
     "ul", "street", "str", "st", "apt", "kv", "kvartira", "g", "city", "d", "dom", "house", "republic",
     "respublika", "kyrgyz", "kyrgyzskaya", "kyrgyzstan", "kg", "kr",
@@ -63,7 +53,6 @@ fn translit(c: char) -> &'static str {
     }
 }
 
-/// Lower-case, transliterate Cyrillic to Latin, split into alphanumeric tokens, drop noise.
 fn tokens(input: &str, noise: &[&str]) -> Vec<String> {
     let mut latin = String::with_capacity(input.len());
     for c in input.chars().flat_map(|c| c.to_lowercase()) {
@@ -101,7 +90,6 @@ fn levenshtein(a: &str, b: &str) -> usize {
     prev[b.len()]
 }
 
-/// Equal, or one edit apart for longer words (transliteration variants).
 fn same_token(a: &str, b: &str) -> bool {
     a == b || (a.len() >= 5 && b.len() >= 5 && levenshtein(a, b) <= 1)
 }
@@ -143,7 +131,7 @@ fn normalized(value: &str) -> String {
     value.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_uppercase).collect()
 }
 
-fn checks_number(kind: DocKind) -> bool {
+pub fn checks_number(kind: DocKind) -> bool {
     matches!(kind, DocKind::Registration | DocKind::TaxLetter | DocKind::BankStatement)
 }
 
@@ -167,15 +155,36 @@ pub fn compare_number(typed: Option<&str>, doc: &Extracted, kind: NumberKind) ->
     let Some(typed) = typed.map(normalized).filter(|t| !t.is_empty()) else { return FieldCheck::NotChecked };
     let tax = identifier(&doc.tax_number);
     let registry = identifier(&doc.registration_number);
+    if tax.is_none() && registry.is_none() {
+        return FieldCheck::NotFound;
+    }
     let candidates: Vec<String> = match kind {
         NumberKind::Tax => tax.into_iter().collect(),
         NumberKind::Registry => registry.into_iter().collect(),
         NumberKind::Unknown => tax.into_iter().chain(registry).collect(),
     };
     if candidates.is_empty() {
-        return if kind == NumberKind::Unknown { FieldCheck::NotFound } else { FieldCheck::NotChecked };
+        FieldCheck::NotChecked
+    } else if candidates.contains(&typed) {
+        FieldCheck::Match
+    } else {
+        FieldCheck::Mismatch
     }
-    if candidates.contains(&typed) { FieldCheck::Match } else { FieldCheck::Mismatch }
+}
+
+pub fn number_to_show(doc: &Extracted, typed: Option<&str>, kind: NumberKind) -> Field {
+    let wanted = typed.map(normalized).filter(|t| !t.is_empty());
+    let matches = |field: &Field| wanted.as_deref().is_some_and(|w| identifier(field).as_deref() == Some(w));
+    let has = |field: &Field| identifier(field).is_some();
+    let chosen = match kind {
+        NumberKind::Tax if has(&doc.tax_number) => &doc.tax_number,
+        NumberKind::Registry if has(&doc.registration_number) => &doc.registration_number,
+        _ if matches(&doc.registration_number) => &doc.registration_number,
+        _ if matches(&doc.tax_number) => &doc.tax_number,
+        _ if has(&doc.tax_number) => &doc.tax_number,
+        _ => &doc.registration_number,
+    };
+    chosen.clone()
 }
 
 fn parse_date(field: &Field) -> Option<NaiveDate> {
@@ -195,12 +204,7 @@ pub fn freshness(req: Requirement, doc: &Extracted, today: NaiveDate) -> Freshne
     }
 }
 
-pub fn compare(req: Requirement, typed: &Typed, doc: &Extracted, today: NaiveDate) -> Comparison {
-    let kind = number_kind(typed.registration_number.as_deref(), &[doc]);
-    compare_with(req, typed, doc, today, kind)
-}
-
-pub fn compare_with(req: Requirement, typed: &Typed, doc: &Extracted, today: NaiveDate, number_kind: NumberKind) -> Comparison {
+pub fn compare(req: Requirement, typed: &Typed, doc: &Extracted, today: NaiveDate, number_kind: NumberKind) -> Comparison {
     let kind_accepted = req.accepted_kinds().contains(&doc.kind);
     let legal_name = compare_name(typed.legal_name.as_deref(), &doc.legal_name);
     let registration_number = if checks_number(doc.kind) {
@@ -359,6 +363,24 @@ mod tests {
     }
 
     #[test]
+    fn a_document_without_any_identifier_is_not_found_whatever_the_kind() {
+        let bare = Extracted { registration_number: none(), tax_number: none(), ..doc(DocKind::BankStatement) };
+        assert_eq!(compare_number(Some("99-0000001"), &bare, NumberKind::Tax), FieldCheck::NotFound);
+        assert_eq!(compare_number(Some("99-0000001"), &bare, NumberKind::Unknown), FieldCheck::NotFound);
+    }
+
+    #[test]
+    fn the_card_shows_the_identifier_the_verdict_is_about() {
+        let both = Extracted { registration_number: f("0000000001"), tax_number: f("99-0000001"), ..doc(DocKind::Registration) };
+        let show = |doc: &Extracted, typed: Option<&str>, kind| number_to_show(doc, typed, kind).value;
+        assert_eq!(show(&both, Some("99-0000001"), NumberKind::Tax).as_deref(), Some("99-0000001"));
+        assert_eq!(show(&both, Some("0000000001"), NumberKind::Registry).as_deref(), Some("0000000001"));
+        assert_eq!(show(&both, Some("12345"), NumberKind::Unknown).as_deref(), Some("99-0000001"));
+        assert_eq!(show(&us_certificate(), Some("99-0000001"), NumberKind::Tax).as_deref(), Some("0000000001"));
+        assert_eq!(show(&us_ein_letter(), None, NumberKind::Unknown).as_deref(), Some("99-0000001"));
+    }
+
+    #[test]
     fn the_kind_of_the_typed_number_follows_the_documents() {
         let docs = [&us_certificate(), &us_ein_letter()];
         assert_eq!(number_kind(Some("99-0000001"), &docs), NumberKind::Tax);
@@ -428,7 +450,7 @@ mod tests {
             registration_number: Some("20000000000001".into()),
             address: None,
         };
-        let c = compare(Requirement::Formation, &typed, &doc(DocKind::Registration), d(2026, 10, 12));
+        let c = compare(Requirement::Formation, &typed, &doc(DocKind::Registration), d(2026, 10, 12), NumberKind::Unknown);
         assert!(c.kind_accepted);
         assert_eq!(c.issues.len(), 1);
         assert_eq!(c.issues[0].code, "name_partial");
@@ -445,7 +467,7 @@ mod tests {
         let mut bill = doc(DocKind::UtilityBill);
         bill.registration_number = f("00-000-0001");
         bill.period_end = f("2026-09-30");
-        let c = compare(Requirement::ProofOfAddress, &typed, &bill, d(2026, 10, 12));
+        let c = compare(Requirement::ProofOfAddress, &typed, &bill, d(2026, 10, 12), NumberKind::Unknown);
         assert_eq!(c.registration_number, FieldCheck::NotChecked);
         assert!(c.issues.is_empty());
     }
@@ -453,7 +475,7 @@ mod tests {
     #[test]
     fn a_tax_letter_covers_the_registration_requirement() {
         let typed = Typed { legal_name: None, registration_number: Some("99-0000001".into()), address: None };
-        let c = compare(Requirement::Formation, &typed, &us_ein_letter_as(DocKind::TaxLetter), d(2026, 10, 12));
+        let c = compare(Requirement::Formation, &typed, &us_ein_letter_as(DocKind::TaxLetter), d(2026, 10, 12), NumberKind::Unknown);
         assert!(c.kind_accepted);
         assert_eq!(c.registration_number, FieldCheck::Match);
         assert!(c.issues.is_empty());
@@ -465,7 +487,7 @@ mod tests {
 
     #[test]
     fn wrong_kind_is_reported() {
-        let c = compare(Requirement::Formation, &Typed::default(), &doc(DocKind::BankStatement), d(2026, 10, 12));
+        let c = compare(Requirement::Formation, &Typed::default(), &doc(DocKind::BankStatement), d(2026, 10, 12), NumberKind::Unknown);
         assert!(!c.kind_accepted);
         assert!(c.issues.iter().any(|i| i.code == "wrong_document_kind"));
     }

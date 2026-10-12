@@ -133,6 +133,7 @@ pub struct DocumentView {
     pub name: String,
     pub size: i32,
     pub extracted: Extracted,
+    pub number: Field,
     pub results: Vec<RequirementResult>,
     pub created_at: DateTime<Utc>,
 }
@@ -210,9 +211,14 @@ fn authority(kind: DocKind) -> Option<u8> {
     }
 }
 
-fn suggest(documents: &[DocumentView], field: impl Fn(&Extracted) -> &Field) -> Option<Suggestion> {
+fn suggest(
+    documents: &[DocumentView],
+    field: impl Fn(&Extracted) -> &Field,
+    allowed: impl Fn(DocKind) -> bool,
+) -> Option<Suggestion> {
     documents
         .iter()
+        .filter(|document| allowed(document.extracted.kind))
         .filter_map(|document| {
             let rank = authority(document.extracted.kind)?;
             let field = field(&document.extracted);
@@ -225,10 +231,12 @@ fn suggest(documents: &[DocumentView], field: impl Fn(&Extracted) -> &Field) -> 
 }
 
 fn suggestions(documents: &[DocumentView]) -> Suggestions {
+    let any = |_: DocKind| true;
     Suggestions {
-        legal_name: suggest(documents, |e| &e.legal_name),
-        registration_number: suggest(documents, |e| &e.tax_number).or_else(|| suggest(documents, |e| &e.registration_number)),
-        address: suggest(documents, |e| &e.address),
+        legal_name: suggest(documents, |e| &e.legal_name, any),
+        registration_number: suggest(documents, |e| &e.tax_number, compare::checks_number)
+            .or_else(|| suggest(documents, |e| &e.registration_number, compare::checks_number)),
+        address: suggest(documents, |e| &e.address, any),
     }
 }
 
@@ -244,10 +252,12 @@ pub fn view(application: ApplicationRow, documents: Vec<DocumentRow>, today: Nai
         .map(|d| {
             let extracted = d.extracted.0;
             let results = match &business {
-                Some(b) => compare::evaluate_with(&Requirement::ALL, &b.typed(), &extracted, today, kind),
+                Some(b) => compare::evaluate(&Requirement::ALL, &b.typed(), &extracted, today, kind),
                 None => Vec::new(),
             };
-            DocumentView { id: d.id, name: d.filename, size: d.size_bytes, extracted, results, created_at: d.created_at }
+            let typed_number = business.as_ref().map(|b| b.registration_number.as_str());
+            let number = compare::number_to_show(&extracted, typed_number, kind);
+            DocumentView { id: d.id, name: d.filename, size: d.size_bytes, extracted, number, results, created_at: d.created_at }
         })
         .collect();
     let checklist = checklist(&documents);
@@ -444,6 +454,32 @@ mod tests {
         let v = view(app, docs, today);
         assert!(v.suggestions.address.is_none());
         assert_eq!(v.suggestions.registration_number.unwrap().value, "20000000000001");
+    }
+
+    #[test]
+    fn a_utility_bill_never_suggests_a_number() {
+        let today = day(2026, 10, 12);
+        let app = application(Some(business()));
+        let mut bill = extracted(DocKind::UtilityBill, Some("2026-09-30"), None);
+        bill.registration_number = field(Some("00-000-0001"));
+        bill.tax_number = field(Some("11-1111111"));
+        let docs = vec![row(app.id, "bill.pdf", bill)];
+        let v = view(app, docs, today);
+        assert!(v.suggestions.registration_number.is_none());
+        assert!(v.suggestions.legal_name.is_some());
+    }
+
+    #[test]
+    fn documents_stored_before_the_tax_number_existed_still_load() {
+        let old = r#"{"kind":"registration","legalName":{"value":"X Y","confidence":0.9,"page":1},
+            "registrationNumber":{"value":"20000000000001","confidence":0.9,"page":1},
+            "address":{"value":null,"confidence":0.0,"page":null},
+            "periodStart":{"value":null,"confidence":0.0,"page":null},
+            "periodEnd":{"value":null,"confidence":0.0,"page":null},
+            "issueDate":{"value":null,"confidence":0.0,"page":null},"notes":null}"#;
+        let parsed: Extracted = serde_json::from_str(old).unwrap();
+        assert!(parsed.tax_number.value.is_none());
+        assert_eq!(parsed.registration_number.value.as_deref(), Some("20000000000001"));
     }
 
     #[test]
