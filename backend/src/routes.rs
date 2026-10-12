@@ -12,6 +12,7 @@ use serde_json::json;
 use sqlx::PgPool;
 
 use crate::{
+    applications,
     compare::{self, RequirementResult},
     db,
     domain::{Extracted, Requirement, Typed},
@@ -32,6 +33,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/health", get(health))
         .route("/api/documents/analyze", post(analyze))
         .route("/api/documents/compare", post(compare_again))
+        .merge(applications::routes())
         .layer(DefaultBodyLimit::max(MAX_UPLOAD_BYTES + 1024 * 1024))
         .with_state(state)
 }
