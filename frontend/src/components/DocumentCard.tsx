@@ -10,7 +10,6 @@ import { requirementLabels, type Business } from '#/lib/schema'
 import {
   docKindLabels,
   type DocumentView,
-  type Extracted,
   type ExtractedField,
   type FieldCheck,
   type SourceField,
@@ -26,18 +25,6 @@ const useLabels: Record<SourceField, string> = {
   legalName: 'Use document name',
   registrationNumber: 'Use document number',
   address: 'Use document address',
-}
-
-function normalized(value: string | null | undefined) {
-  return (value ?? '').replace(/[^\p{L}\p{N}]/gu, '').toUpperCase()
-}
-
-function numberField(extracted: Extracted, typed: string): ExtractedField {
-  const wanted = normalized(typed)
-  const { registrationNumber, taxNumber } = extracted
-  if (wanted && normalized(registrationNumber.value) === wanted) return registrationNumber
-  if (wanted && normalized(taxNumber?.value) === wanted) return taxNumber
-  return taxNumber?.value ? taxNumber : registrationNumber
 }
 
 const frame = css({
@@ -289,7 +276,7 @@ export function DocumentCard({
           <FieldRow field="legalName" extracted={extracted.legalName} check={primary.legalName} typed={business.legalName} onApply={onApply} />
           <FieldRow
             field="registrationNumber"
-            extracted={numberField(extracted, business.registrationNumber)}
+            extracted={document.number}
             check={primary.registrationNumber}
             typed={business.registrationNumber}
             onApply={onApply}

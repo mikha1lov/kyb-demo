@@ -66,6 +66,7 @@ export type DocumentView = {
   name: string
   size: number
   extracted: Extracted
+  number: ExtractedField
   results: RequirementResult[]
   createdAt: string
 }
