@@ -39,6 +39,8 @@ curl -s http://127.0.0.1:8787/api/documents/analyze \
 
 Requirements: `formation`, `source_of_funds` (max 180 days old), `proof_of_address` (max 90 days). Repeat `-F requirement=...` to test one upload against several; the response has one result per requirement.
 
+`POST /api/documents/compare` takes JSON `{requirements, typed, extracted}` and returns the same per-requirement results without calling the model.
+
 ## Data and privacy
 
 - Use only the synthetic documents. Real passports, bank statements and tax numbers must not be sent to a third-party API.

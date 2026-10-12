@@ -8,7 +8,7 @@ use axum::{
     routing::{get, post},
 };
 use chrono::Utc;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
@@ -28,6 +28,7 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/api/health", get(health))
         .route("/api/documents/analyze", post(analyze))
+        .route("/api/documents/compare", post(compare_again))
         .layer(DefaultBodyLimit::max(MAX_UPLOAD_BYTES + 1024 * 1024))
         .with_state(state)
 }
@@ -61,6 +62,34 @@ impl IntoResponse for ApiError {
 struct RequirementResult {
     requirement: Requirement,
     comparison: Comparison,
+}
+
+fn evaluate(requirements: &[Requirement], typed: &Typed, extracted: &Extracted) -> Vec<RequirementResult> {
+    let today = Utc::now().date_naive();
+    requirements
+        .iter()
+        .map(|&requirement| RequirementResult {
+            requirement,
+            comparison: compare::compare(requirement, typed, extracted, today),
+        })
+        .collect()
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CompareRequest {
+    requirements: Vec<Requirement>,
+    typed: Typed,
+    extracted: Extracted,
+}
+
+#[derive(Serialize)]
+struct CompareResponse {
+    results: Vec<RequirementResult>,
+}
+
+async fn compare_again(Json(request): Json<CompareRequest>) -> Json<CompareResponse> {
+    Json(CompareResponse { results: evaluate(&request.requirements, &request.typed, &request.extracted) })
 }
 
 #[derive(Serialize)]
@@ -115,14 +144,7 @@ async fn analyze(State(state): State<AppState>, mut form: Multipart) -> Result<J
     tracing::info!(bytes = file.bytes.len(), mime = %file.mime, ?requirements, "analyzing document");
 
     let extracted = state.extractor.extract(file).await?;
-    let today = Utc::now().date_naive();
-    let results: Vec<RequirementResult> = requirements
-        .iter()
-        .map(|&requirement| RequirementResult {
-            requirement,
-            comparison: compare::compare(requirement, &typed, &extracted, today),
-        })
-        .collect();
+    let results = evaluate(&requirements, &typed, &extracted);
     tracing::info!(requirements = results.len(), "document analysed");
 
     Ok(Json(AnalyzeResponse { extractor: state.extractor.label(), extracted, results }))
