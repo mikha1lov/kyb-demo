@@ -4,23 +4,40 @@ import { css } from 'styled-system/css'
 import { Badge } from '#/components/ui/Badge'
 import { Button } from '#/components/ui/Button'
 import { Spinner } from '#/components/ui/Spinner'
-import { applyFromDocument, removeDocument, type DocumentEntry, type FromDocument } from '#/lib/draft'
 import { formatBytes, formatDate } from '#/lib/format'
 import { counted, isBlocking } from '#/lib/requirements'
 import { requirementLabels, type Business } from '#/lib/schema'
-import { docKindLabels, type Comparison, type ExtractedField, type FieldCheck } from '#/lib/types'
+import {
+  docKindLabels,
+  type DocumentView,
+  type ExtractedField,
+  type FieldCheck,
+  type SourceField,
+} from '#/lib/types'
 
-const fieldLabels: Record<FromDocument, string> = {
+const fieldLabels: Record<SourceField, string> = {
   legalName: 'Name',
   registrationNumber: 'Number',
   address: 'Address',
 }
 
-const useLabels: Record<FromDocument, string> = {
+const useLabels: Record<SourceField, string> = {
   legalName: 'Use document name',
   registrationNumber: 'Use document number',
   address: 'Use document address',
 }
+
+const frame = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4',
+  p: '4',
+  borderRadius: 'lg',
+  bg: 'bg.raised',
+  border: '1px solid',
+  borderColor: 'border.subtle',
+  animation: 'rise 200ms ease-out',
+})
 
 function Highlight({ text, tokens }: { text: string; tokens: string[] }) {
   if (tokens.length === 0) return <>{text}</>
@@ -42,16 +59,75 @@ function Highlight({ text, tokens }: { text: string; tokens: string[] }) {
   )
 }
 
+function Header({
+  name,
+  caption,
+  status,
+  onRemove,
+}: {
+  name: string
+  caption: string
+  status: ReactNode
+  onRemove?: () => void
+}) {
+  return (
+    <header className={css({ display: 'flex', alignItems: 'center', gap: '3' })}>
+      <span
+        className={css({
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          w: '9',
+          h: '9',
+          flexShrink: 0,
+          borderRadius: 'sm',
+          bg: 'bg.surface',
+          border: '1px solid',
+          borderColor: 'border.subtle',
+          color: 'text.secondary',
+        })}
+      >
+        <FileText size={18} />
+      </span>
+      <div className={css({ minW: 0, flex: 1 })}>
+        <p className={css({ fontWeight: 'medium', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
+          {name}
+        </p>
+        <p className={css({ color: 'text.muted', fontSize: 'xs' })}>{caption}</p>
+      </div>
+      {status}
+      {onRemove ? (
+        <button
+          type="button"
+          aria-label={`Remove ${name}`}
+          onClick={onRemove}
+          className={css({
+            display: 'flex',
+            p: '2',
+            borderRadius: 'sm',
+            color: 'text.muted',
+            _hover: { color: 'text.primary', bg: 'bg.hover' },
+          })}
+        >
+          <Trash2 size={16} />
+        </button>
+      ) : null}
+    </header>
+  )
+}
+
 function FieldRow({
   field,
   extracted,
   check,
   typed,
+  onApply,
 }: {
-  field: FromDocument
+  field: SourceField
   extracted: ExtractedField
   check: FieldCheck
   typed: string
+  onApply: (field: SourceField, value: string) => void
 }) {
   const value = extracted.value
   if (!value) return null
@@ -96,7 +172,7 @@ function FieldRow({
           <span className={css({ minW: 0, color: 'text.secondary', wordBreak: 'break-word' })}>
             <Highlight text={typed} tokens={typedTokens} />
           </span>
-          <Button size="sm" variant="secondary" onClick={() => applyFromDocument(field, value)}>
+          <Button size="sm" variant="secondary" onClick={() => onApply(field, value)}>
             {useLabels[field]}
           </Button>
         </div>
@@ -105,9 +181,8 @@ function FieldRow({
   )
 }
 
-function Dates({ document }: { document: DocumentEntry }) {
-  const extracted = document.extracted
-  if (!extracted) return null
+function Dates({ document }: { document: DocumentView }) {
+  const { extracted } = document
   const start = formatDate(extracted.periodStart.value)
   const end = formatDate(extracted.periodEnd.value)
   const issued = formatDate(extracted.issueDate.value)
@@ -167,108 +242,81 @@ function Skeleton() {
   )
 }
 
-function Status({ document }: { document: DocumentEntry }) {
-  if (document.status === 'analyzing') {
-    return (
-      <Badge>
-        <Spinner size={12} /> Analyzing
-      </Badge>
-    )
-  }
-  if (document.status === 'failed') return <Badge tone="danger">Failed</Badge>
+function Status({ document }: { document: DocumentView }) {
   const results = counted(document)
   if (results.length === 0) return <Badge tone="danger">Not accepted</Badge>
   if (results.some(isBlocking)) return <Badge tone="warning">Needs attention</Badge>
   return <Badge tone="success">Verified</Badge>
 }
 
-export function DocumentCard({ document, business }: { document: DocumentEntry; business: Business }) {
-  const primary: Comparison | undefined = counted(document)[0]?.comparison
-  const extracted = document.extracted
+export function DocumentCard({
+  document,
+  business,
+  onApply,
+  onRemove,
+}: {
+  document: DocumentView
+  business: Business
+  onApply: (field: SourceField, value: string) => void
+  onRemove: () => void
+}) {
+  const primary = counted(document)[0]?.comparison
+  const { extracted } = document
 
   return (
-    <article
-      className={css({
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4',
-        p: '4',
-        borderRadius: 'lg',
-        bg: 'bg.raised',
-        border: '1px solid',
-        borderColor: 'border.subtle',
-        animation: 'rise 200ms ease-out',
-      })}
-    >
-      <header className={css({ display: 'flex', alignItems: 'center', gap: '3' })}>
-        <span
-          className={css({
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            w: '9',
-            h: '9',
-            flexShrink: 0,
-            borderRadius: 'sm',
-            bg: 'bg.surface',
-            border: '1px solid',
-            borderColor: 'border.subtle',
-            color: 'text.secondary',
-          })}
-        >
-          <FileText size={18} />
-        </span>
-        <div className={css({ minW: 0, flex: 1 })}>
-          <p className={css({ fontWeight: 'medium', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
-            {document.name}
-          </p>
-          <p className={css({ color: 'text.muted', fontSize: 'xs' })}>
-            {extracted ? `${docKindLabels[extracted.kind]} · ` : ''}
-            {formatBytes(document.size)}
-          </p>
-        </div>
-        <Status document={document} />
-        <button
-          type="button"
-          aria-label={`Remove ${document.name}`}
-          onClick={() => removeDocument(document.id)}
-          className={css({
-            display: 'flex',
-            p: '2',
-            borderRadius: 'sm',
-            color: 'text.muted',
-            _hover: { color: 'text.primary', bg: 'bg.hover' },
-          })}
-        >
-          <Trash2 size={16} />
-        </button>
-      </header>
-
-      {document.status === 'analyzing' ? <Skeleton /> : null}
-
-      {document.status === 'failed' ? (
-        <p className={css({ color: 'danger.fg' })} role="alert">
-          {document.error}
-        </p>
-      ) : null}
-
-      {document.status === 'ready' && extracted && !primary ? (
-        <p className={css({ color: 'text.secondary' })}>This document type is not accepted</p>
-      ) : null}
-
-      {document.status === 'ready' && extracted && primary ? (
+    <article className={frame}>
+      <Header
+        name={document.name}
+        caption={`${docKindLabels[extracted.kind]} · ${formatBytes(document.size)}`}
+        status={<Status document={document} />}
+        onRemove={onRemove}
+      />
+      {primary ? (
         <div className={css({ display: 'flex', flexDirection: 'column', gap: '3.5' })}>
-          <FieldRow field="legalName" extracted={extracted.legalName} check={primary.legalName} typed={business.legalName} />
+          <FieldRow field="legalName" extracted={extracted.legalName} check={primary.legalName} typed={business.legalName} onApply={onApply} />
           <FieldRow
             field="registrationNumber"
             extracted={extracted.registrationNumber}
             check={primary.registrationNumber}
             typed={business.registrationNumber}
+            onApply={onApply}
           />
-          <FieldRow field="address" extracted={extracted.address} check={primary.address} typed={business.address} />
+          <FieldRow field="address" extracted={extracted.address} check={primary.address} typed={business.address} onApply={onApply} />
           <Dates document={document} />
         </div>
-      ) : null}
+      ) : (
+        <p className={css({ color: 'text.secondary' })}>This document type is not accepted</p>
+      )}
+    </article>
+  )
+}
+
+export type Pending = { id: string; name: string; size: number; error?: string }
+
+export function PendingCard({ upload, onDismiss }: { upload: Pending; onDismiss: () => void }) {
+  return (
+    <article className={frame}>
+      <Header
+        name={upload.name}
+        caption={formatBytes(upload.size)}
+        status={
+          upload.error ? (
+            <Badge tone="danger">Failed</Badge>
+          ) : (
+            <Badge>
+              <Spinner size={12} /> Analyzing
+            </Badge>
+          )
+        }
+        onRemove={upload.error ? onDismiss : undefined}
+      />
+      {upload.error ? (
+        <p className={css({ color: 'danger.fg' })} role="alert">
+          {upload.error}
+        </p>
+      ) : (
+        <Skeleton />
+      )}
     </article>
   )
 }
