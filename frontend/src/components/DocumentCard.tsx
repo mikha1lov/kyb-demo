@@ -28,15 +28,15 @@ const useLabels: Record<SourceField, string> = {
   address: 'Use document address',
 }
 
-function digits(value: string | null | undefined) {
-  return (value ?? '').replace(/\D/g, '')
+function normalized(value: string | null | undefined) {
+  return (value ?? '').replace(/[^\p{L}\p{N}]/gu, '').toUpperCase()
 }
 
 function numberField(extracted: Extracted, typed: string): ExtractedField {
-  const wanted = digits(typed)
+  const wanted = normalized(typed)
   const { registrationNumber, taxNumber } = extracted
-  if (wanted && digits(registrationNumber.value) === wanted) return registrationNumber
-  if (wanted && digits(taxNumber?.value) === wanted) return taxNumber
+  if (wanted && normalized(registrationNumber.value) === wanted) return registrationNumber
+  if (wanted && normalized(taxNumber?.value) === wanted) return taxNumber
   return taxNumber?.value ? taxNumber : registrationNumber
 }
 
