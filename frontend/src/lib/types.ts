@@ -68,6 +68,10 @@ export type DocumentView = {
   createdAt: string
 }
 
+export type Suggestion = { value: string; documentId: string; confidence: number }
+
+export type Suggestions = Partial<Record<SourceField, Suggestion>>
+
 export type ChecklistItem = { requirement: Requirement; documentId: string | null }
 
 export type Application = {
@@ -77,6 +81,9 @@ export type Application = {
   sources: Sources
   documents: DocumentView[]
   checklist: ChecklistItem[]
+  suggestions: Suggestions
+  requirementsMet: boolean
+  businessComplete: boolean
   complete: boolean
   submittedAt: string | null
   createdAt: string

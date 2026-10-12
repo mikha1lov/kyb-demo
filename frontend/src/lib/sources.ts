@@ -1,12 +1,17 @@
-import type { Business } from './schema'
-import type { SourceField, Sources } from './types'
+import type { Details } from './schema'
+import type { Application, SourceField, Sources } from './types'
 
 const fields: SourceField[] = ['legalName', 'registrationNumber', 'address']
 
-export function keepSources(previous: Business | null, next: Business, sources: Sources): Sources {
-  const kept: Sources = {}
+export function sourcesFor(details: Details, application: Application): Sources {
+  const sources: Sources = {}
   for (const field of fields) {
-    if (sources[field] && previous && previous[field] === next[field]) kept[field] = sources[field]
+    const suggested = application.suggestions[field]?.value
+    if (suggested !== undefined && suggested === details[field]) {
+      sources[field] = 'document'
+    } else if (application.sources[field] && application.business?.[field] === details[field]) {
+      sources[field] = application.sources[field]
+    }
   }
-  return kept
+  return sources
 }

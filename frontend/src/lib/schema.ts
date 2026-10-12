@@ -20,6 +20,14 @@ export const businessSchema = z.object({
 
 export type Business = z.infer<typeof businessSchema>
 
+export const companySchema = businessSchema.pick({ country: true, entityType: true })
+
+export type Company = z.infer<typeof companySchema>
+
+export const detailsSchema = businessSchema.pick({ legalName: true, registrationNumber: true, address: true })
+
+export type Details = z.infer<typeof detailsSchema>
+
 export const requirements = ['formation', 'source_of_funds', 'proof_of_address'] as const
 export type Requirement = (typeof requirements)[number]
 
