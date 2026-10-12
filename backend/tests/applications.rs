@@ -242,3 +242,60 @@ async fn the_number_of_documents_is_limited(pool: PgPool) {
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(body["error"], "too_many_documents");
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn details_are_prefilled_from_documents_and_finish_the_application(pool: PgPool) {
+    let app = app(pool);
+    let payload = json!({"business": {"country": "kg", "entityType": "sole_proprietor"}});
+    let (status, body) = json_call(&app, "POST", "/api/applications", Some(payload)).await;
+    assert_eq!(status, StatusCode::CREATED);
+    let id = body["id"].as_str().unwrap().to_string();
+    assert_eq!(body["businessComplete"], false);
+    assert_eq!(body["business"]["legalName"], "");
+
+    let (_, body) = upload(&app, &id, "cert.pdf").await;
+    assert_eq!(covered(&body), vec!["formation"]);
+    assert_eq!(body["requirementsMet"], false);
+    assert_eq!(body["suggestions"]["legalName"]["value"], "TOKOEV ALIYAR BEKOVICH PE");
+    assert_eq!(body["suggestions"]["registrationNumber"]["value"], "20000000000001");
+    assert_eq!(body["suggestions"]["address"]["value"], "KYRGYZ REPUBLIC, BISHKEK, UL. TESTOVAYA 10, APT 5");
+
+    let (_, body) = upload(&app, &id, "statement.pdf").await;
+    assert_eq!(body["requirementsMet"], true);
+    assert_eq!(body["complete"], false);
+
+    let submit = format!("/api/applications/{id}/submit");
+    let (status, body) = json_call(&app, "POST", &submit, None).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(body["error"], "incomplete");
+
+    let details = json!({
+        "business": {
+            "country": "KG",
+            "entityType": "sole_proprietor",
+            "legalName": "TOKOEV ALIYAR BEKOVICH PE",
+            "registrationNumber": "20000000000001",
+            "address": "KYRGYZ REPUBLIC, BISHKEK, UL. TESTOVAYA 10, APT 5"
+        },
+        "sources": {"legalName": "document", "registrationNumber": "document", "address": "document"}
+    });
+    let (status, body) = json_call(&app, "PUT", &format!("/api/applications/{id}/business"), Some(details)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["businessComplete"], true);
+    assert_eq!(body["complete"], true);
+
+    let (status, body) = json_call(&app, "POST", &submit, None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["status"], "submitted");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn a_details_value_that_is_too_short_is_rejected(pool: PgPool) {
+    let app = app(pool);
+    let id = create(&app, "Tokoev Aliyar Bekovich").await;
+    let mut payload = business("A");
+    payload["business"]["country"] = json!("KG");
+    let (status, body) = json_call(&app, "PUT", &format!("/api/applications/{id}/business"), Some(payload)).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(body["error"], "invalid_business");
+}
