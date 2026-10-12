@@ -1,16 +1,15 @@
 import { Check } from 'lucide-react'
 import { css } from 'styled-system/css'
-import type { DocumentEntry } from '#/lib/draft'
-import { satisfiedBy } from '#/lib/requirements'
-import { requirementLabels, requirements } from '#/lib/schema'
+import { requirementLabels } from '#/lib/schema'
+import type { Application } from '#/lib/types'
 
-export function Checklist({ documents }: { documents: DocumentEntry[] }) {
+export function Checklist({ application }: { application: Application }) {
   return (
     <ul className={css({ display: 'flex', flexDirection: 'column', gap: '3', listStyle: 'none' })}>
-      {requirements.map((requirement) => {
-        const document = satisfiedBy(documents, requirement)
+      {application.checklist.map((item) => {
+        const document = application.documents.find((d) => d.id === item.documentId)
         return (
-          <li key={requirement} className={css({ display: 'flex', alignItems: 'center', gap: '3', minH: '6' })}>
+          <li key={item.requirement} className={css({ display: 'flex', alignItems: 'center', gap: '3', minH: '6' })}>
             <span
               className={css({
                 display: 'flex',
@@ -30,7 +29,7 @@ export function Checklist({ documents }: { documents: DocumentEntry[] }) {
               {document ? <Check size={12} strokeWidth={3} /> : null}
             </span>
             <span className={css({ fontWeight: 'medium', color: document ? 'text.primary' : 'text.secondary' })}>
-              {requirementLabels[requirement]}
+              {requirementLabels[item.requirement]}
             </span>
             {document ? (
               <span
