@@ -1,12 +1,14 @@
-import { requirements, type Business } from './schema'
-import type { Extracted, RequirementResult } from './types'
+import type { Business } from './schema'
+import type { Application, Sources } from './types'
 
 export class ApiError extends Error {
   code: string
+  status: number
 
-  constructor(code: string, message: string) {
+  constructor(code: string, message: string, status = 0) {
     super(message)
     this.code = code
+    this.status = status
   }
 }
 
@@ -15,9 +17,13 @@ const friendly: Record<string, string> = {
   provider_unreachable: 'The document could not be read. Try again',
   provider_error: 'The document could not be read. Try again',
   provider_bad_answer: 'The document could not be read. Try again',
+  already_submitted: 'This application has already been submitted',
+  too_many_documents: 'Too many documents',
+  incomplete: 'Some requirements are still open',
+  internal_error: 'Something went wrong. Try again',
 }
 
-async function request<T>(path: string, init: RequestInit): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response
   try {
     response = await fetch(path, init)
@@ -27,34 +33,37 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({}))
     const code = typeof body.error === 'string' ? body.error : 'unknown'
-    throw new ApiError(code, friendly[code] ?? body.message ?? 'Something went wrong')
+    throw new ApiError(code, friendly[code] ?? body.message ?? 'Something went wrong', response.status)
   }
   return response.json()
 }
 
-function typed(business: Business) {
-  return {
-    legalName: business.legalName,
-    registrationNumber: business.registrationNumber,
-    address: business.address,
-  }
+function json(method: string, body: unknown): RequestInit {
+  return { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
 }
 
-export type Analysis = { extracted: Extracted; results: RequirementResult[] }
+export function createApplication(business: Business, sources: Sources = {}) {
+  return request<Application>('/api/applications', json('POST', { business, sources }))
+}
 
-export function analyzeDocument(file: File, business: Business): Promise<Analysis> {
+export function getApplication(id: string) {
+  return request<Application>(`/api/applications/${id}`)
+}
+
+export function saveBusiness(id: string, business: Business, sources: Sources) {
+  return request<Application>(`/api/applications/${id}/business`, json('PUT', { business, sources }))
+}
+
+export function uploadDocument(id: string, file: File) {
   const body = new FormData()
   body.append('file', file)
-  for (const requirement of requirements) body.append('requirement', requirement)
-  body.append('typed', JSON.stringify(typed(business)))
-  return request('/api/documents/analyze', { method: 'POST', body })
+  return request<Application>(`/api/applications/${id}/documents`, { method: 'POST', body })
 }
 
-export async function compareDocument(extracted: Extracted, business: Business): Promise<RequirementResult[]> {
-  const { results } = await request<{ results: RequirementResult[] }>('/api/documents/compare', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ requirements, typed: typed(business), extracted }),
-  })
-  return results
+export function deleteDocument(id: string, documentId: string) {
+  return request<Application>(`/api/applications/${id}/documents/${documentId}`, { method: 'DELETE' })
+}
+
+export function submitApplication(id: string) {
+  return request<Application>(`/api/applications/${id}/submit`, { method: 'POST' })
 }

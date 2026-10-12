@@ -1,4 +1,4 @@
-import type { Requirement } from './schema'
+import type { Business, Requirement } from './schema'
 
 export type DocKind = 'registration' | 'bank_statement' | 'utility_bill' | 'contract' | 'invoice' | 'other'
 
@@ -53,4 +53,32 @@ export const docKindLabels: Record<DocKind, string> = {
   contract: 'Contract',
   invoice: 'Invoice',
   other: 'Document',
+}
+
+export type SourceField = 'legalName' | 'registrationNumber' | 'address'
+
+export type Sources = Partial<Record<SourceField, 'document'>>
+
+export type DocumentView = {
+  id: string
+  name: string
+  size: number
+  extracted: Extracted
+  results: RequirementResult[]
+  createdAt: string
+}
+
+export type ChecklistItem = { requirement: Requirement; documentId: string | null }
+
+export type Application = {
+  id: string
+  status: 'draft' | 'submitted'
+  business: Business | null
+  sources: Sources
+  documents: DocumentView[]
+  checklist: ChecklistItem[]
+  complete: boolean
+  submittedAt: string | null
+  createdAt: string
+  updatedAt: string
 }
