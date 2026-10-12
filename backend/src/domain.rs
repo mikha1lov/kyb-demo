@@ -41,7 +41,7 @@ pub enum DocKind {
 }
 
 /// One extracted value with where it came from and how sure the model is.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Field {
     pub value: Option<String>,
     pub confidence: f32,
@@ -54,6 +54,8 @@ pub struct Extracted {
     pub kind: DocKind,
     pub legal_name: Field,
     pub registration_number: Field,
+    #[serde(default)]
+    pub tax_number: Field,
     pub address: Field,
     pub period_start: Field,
     pub period_end: Field,

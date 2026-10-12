@@ -33,7 +33,7 @@ const PROMPT: &str = "You read business documents for a KYB (know your business)
 Extract the fields exactly as they are written in the document. Do not guess, translate or correct. \
 Rules: legal_name is the name of the person or business the document is about (the account holder for a bank statement, \
 the registrant for a registration certificate); keep the Latin spelling if both Latin and local spellings exist. \
-registration_number is the tax identification or company registration number of that person or business (for example EIN, TIN, VAT, or the company or file number issued by a registry). Never use a bank account, utility account, customer, invoice or policy number; use null when the document shows none of the former. address is the address of that person or business. \
+registration_number is the number assigned by a company registry (a company, file or registration number). tax_number is the tax identification number (for example an EIN, TIN or VAT number, or the tax number printed on a bank statement). Use null for either when the document does not show it, and never use a bank account, utility account, customer, invoice or policy number. address is the address of that person or business. \
 For a bank statement period_start and period_end are the statement interval; issue_date is the document creation date if shown. \
 Dates must be ISO (YYYY-MM-DD). Use null for anything that is not in the document. \
 confidence is your own estimate between 0 and 1 that the value is read correctly; page is the 1-based page where you saw it. \
@@ -58,11 +58,12 @@ fn schema() -> Value {
     json!({
         "type": "object",
         "additionalProperties": false,
-        "required": ["kind", "legalName", "registrationNumber", "address", "periodStart", "periodEnd", "issueDate", "notes"],
+        "required": ["kind", "legalName", "registrationNumber", "taxNumber", "address", "periodStart", "periodEnd", "issueDate", "notes"],
         "properties": {
             "kind": {"type": "string", "enum": ["registration", "bank_statement", "utility_bill", "contract", "invoice", "other"]},
             "legalName": field_schema("Name of the person or business the document is about"),
-            "registrationNumber": field_schema("Tax or registration number"),
+            "registrationNumber": field_schema("Number assigned by a company registry"),
+            "taxNumber": field_schema("Tax identification number such as an EIN, TIN or VAT number"),
             "address": field_schema("Address of that person or business"),
             "periodStart": field_schema("Start of the statement interval, ISO date"),
             "periodEnd": field_schema("End of the statement interval, ISO date"),

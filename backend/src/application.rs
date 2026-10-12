@@ -6,7 +6,7 @@ use sqlx::types::Json;
 use uuid::Uuid;
 
 use crate::{
-    compare::{self, RequirementResult},
+    compare::{self, NumberKind, RequirementResult},
     domain::{DocKind, Extracted, Field, Requirement, Severity, Typed},
 };
 
@@ -226,7 +226,7 @@ fn suggest(documents: &[DocumentView], field: impl Fn(&Extracted) -> &Field) -> 
 fn suggestions(documents: &[DocumentView]) -> Suggestions {
     Suggestions {
         legal_name: suggest(documents, |e| &e.legal_name),
-        registration_number: suggest(documents, |e| &e.registration_number),
+        registration_number: suggest(documents, |e| &e.tax_number).or_else(|| suggest(documents, |e| &e.registration_number)),
         address: suggest(documents, |e| &e.address),
     }
 }
@@ -234,12 +234,16 @@ fn suggestions(documents: &[DocumentView]) -> Suggestions {
 pub fn view(application: ApplicationRow, documents: Vec<DocumentRow>, today: NaiveDate) -> ApplicationView {
     let status = application.status();
     let business = application.business.map(|b| b.0);
+    let kind = business.as_ref().map_or(NumberKind::Unknown, |b| {
+        let extracted: Vec<&Extracted> = documents.iter().map(|d| &d.extracted.0).collect();
+        compare::number_kind(Some(b.registration_number.as_str()), &extracted)
+    });
     let documents: Vec<DocumentView> = documents
         .into_iter()
         .map(|d| {
             let extracted = d.extracted.0;
             let results = match &business {
-                Some(b) => compare::evaluate(&Requirement::ALL, &b.typed(), &extracted, today),
+                Some(b) => compare::evaluate_with(&Requirement::ALL, &b.typed(), &extracted, today, kind),
                 None => Vec::new(),
             };
             DocumentView { id: d.id, name: d.filename, size: d.size_bytes, extracted, results, created_at: d.created_at }
@@ -291,6 +295,7 @@ mod tests {
             kind,
             legal_name: field(Some("TOKOEV ALIYAR BEKOVICH PE")),
             registration_number: field(Some("20000000000001")),
+            tax_number: field(None),
             address: field(Some("KYRGYZ REPUBLIC, BISHKEK, UL. TESTOVAYA 10, APT 5")),
             period_start: field(None),
             period_end: field(period_end),
