@@ -92,7 +92,7 @@ Repeat `-F requirement=...` to check one file against several requirements.
 
 ## Test documents
 
-`python3 fixtures/generate.py` writes fake documents to `fixtures/out/` (needs Chrome). Names, numbers and addresses are made up and every file says so.
+`python3 fixtures/generate.py` writes test documents to `fixtures/out/` (needs Chrome). Names, numbers and addresses are made up and every file says so.
 
 - `registration_certificate.pdf`, `bank_statement_recent.pdf`, `bank_statement_stale.pdf`: a Kyrgyz sole proprietor.
 - `us_certificate_of_formation.pdf`, `us_ein_letter.pdf`, `us_bank_statement_recent.pdf`, `us_bank_statement_stale.pdf`, `us_utility_bill.pdf`: a Texas LLC. The recent statement writes the name as "Acme Test Holdings, LLC" on purpose.
@@ -120,6 +120,6 @@ ssh $HOST 'cat /opt/kyb/.demo-credentials'
 
 ## Heads up
 
-- Use the fake documents only. Whatever you upload goes to OpenAI.
+- Use the test documents only. Whatever you upload goes to OpenAI.
 - Logs have sizes and outcomes, never document contents or extracted values.
 - Nothing here is hardened for the open internet: no auth beyond the basic auth in front of the demo, no upload scanning, no retention policy.
