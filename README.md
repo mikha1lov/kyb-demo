@@ -73,11 +73,13 @@ Test documents in `fixtures/out/`, with the company they describe:
 | `registration_certificate.pdf` | Kyrgyz sole proprietor | registration certificate | covers the registration requirement |
 | `bank_statement_recent.pdf` | Kyrgyz sole proprietor | statement, last 3 months | covers source of funds and proof of address |
 | `bank_statement_stale.pdf` | Kyrgyz sole proprietor | statement, over a year old | flagged as too old for both requirements |
-| `us_certificate_of_formation.pdf` | Texas LLC | certificate of formation | covers the registration requirement; its file number is not the EIN |
+| `us_certificate_of_formation.pdf` | Texas LLC | certificate of formation | covers the registration requirement; carries a state file number, not the EIN |
 | `us_ein_letter.pdf` | Texas LLC | EIN assignment letter | counted as a registration document; carries the EIN |
 | `us_bank_statement_recent.pdf` | Texas LLC | statement, last 3 months, name written "Acme Test Holdings, LLC" | covers source of funds and proof of address; the name still matches |
 | `us_bank_statement_stale.pdf` | Texas LLC | statement, over a year old | flagged as too old |
 | `us_utility_bill.pdf` | Texas LLC | electricity bill | covers proof of address only |
+
+A document can carry two identifiers: a registry number (company or file number) and a tax number (EIN, TIN). The number typed in the details is compared only with the identifier of the same type, so a certificate with a file number and a letter with an EIN do not contradict each other; with several documents the suggestion prefers the tax number.
 
 The recent statement and the bill carry dates relative to the day the script ran; run `python3 fixtures/generate.py` again when they get old.
 
