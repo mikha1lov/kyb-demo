@@ -3,8 +3,9 @@ import { Check } from 'lucide-react'
 import { css } from 'styled-system/css'
 
 const steps = [
-  { to: '/onboarding/$id/business', slug: 'business', label: 'Business' },
+  { to: '/onboarding/$id/business', slug: 'business', label: 'Company' },
   { to: '/onboarding/$id/documents', slug: 'documents', label: 'Documents' },
+  { to: '/onboarding/$id/details', slug: 'details', label: 'Details' },
   { to: '/onboarding/$id/review', slug: 'review', label: 'Review' },
 ] as const
 
@@ -17,7 +18,7 @@ export function Stepper() {
   )
 
   return (
-    <ol className={css({ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3', mb: '6', listStyle: 'none' })}>
+    <ol className={css({ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '3', mb: '6', listStyle: 'none' })}>
       {steps.map((step, index) => {
         const done = index < current
         const active = index === current

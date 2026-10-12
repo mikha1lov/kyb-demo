@@ -9,7 +9,7 @@ export function Section({
   children,
 }: {
   title: string
-  to: '/onboarding/$id/business' | '/onboarding/$id/documents'
+  to: '/onboarding/$id/details' | '/onboarding/$id/documents'
   id: string
   children: ReactNode
 }) {
