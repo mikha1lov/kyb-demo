@@ -5,18 +5,23 @@ export function Field({
   label,
   htmlFor,
   error,
+  tag,
   children,
 }: {
   label: string
   htmlFor?: string
   error?: string
+  tag?: ReactNode
   children: ReactNode
 }) {
   return (
     <div className={css({ display: 'flex', flexDirection: 'column', gap: '2' })}>
-      <label htmlFor={htmlFor} className={css({ fontSize: 'sm', fontWeight: 'medium', color: 'text.secondary' })}>
-        {label}
-      </label>
+      <div className={css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minH: '6' })}>
+        <label htmlFor={htmlFor} className={css({ fontSize: 'sm', fontWeight: 'medium', color: 'text.secondary' })}>
+          {label}
+        </label>
+        {tag}
+      </div>
       {children}
       {error ? (
         <p role="alert" className={css({ fontSize: 'xs', color: 'danger.fg' })}>
