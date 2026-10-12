@@ -9,5 +9,5 @@ export default defineConfig({
       '/api': { target: process.env.API_URL ?? 'http://127.0.0.1:8787', changeOrigin: true },
     },
   },
-  plugins: [tanstackStart(), viteReact()],
+  plugins: [tanstackStart({ spa: { enabled: true } }), viteReact()],
 })
