@@ -2,13 +2,24 @@ import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { css } from 'styled-system/css'
 
-export function Section({ title, to, children }: { title: string; to: '/onboarding/business' | '/onboarding/documents'; children: ReactNode }) {
+export function Section({
+  title,
+  to,
+  id,
+  children,
+}: {
+  title: string
+  to: '/onboarding/$id/business' | '/onboarding/$id/documents'
+  id: string
+  children: ReactNode
+}) {
   return (
     <section className={css({ display: 'flex', flexDirection: 'column' })}>
       <div className={css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: '2' })}>
         <h2 className={css({ fontSize: 'md', fontWeight: 'semibold' })}>{title}</h2>
         <Link
           to={to}
+          params={{ id }}
           className={css({ color: 'text.secondary', fontWeight: 'medium', _hover: { color: 'text.primary' } })}
         >
           Edit

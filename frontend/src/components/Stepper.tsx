@@ -1,18 +1,19 @@
-import { Link, useLocation } from '@tanstack/react-router'
+import { Link, useLocation, useParams } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
 import { css } from 'styled-system/css'
 
 const steps = [
-  { to: '/onboarding/business', label: 'Business' },
-  { to: '/onboarding/documents', label: 'Documents' },
-  { to: '/onboarding/review', label: 'Review' },
+  { to: '/onboarding/$id/business', slug: 'business', label: 'Business' },
+  { to: '/onboarding/$id/documents', slug: 'documents', label: 'Documents' },
+  { to: '/onboarding/$id/review', slug: 'review', label: 'Review' },
 ] as const
 
 export function Stepper() {
   const { pathname } = useLocation()
+  const { id } = useParams({ strict: false })
   const current = Math.max(
     0,
-    steps.findIndex((step) => pathname.startsWith(step.to)),
+    steps.findIndex((step) => pathname.endsWith(`/${step.slug}`)),
   )
 
   return (
@@ -50,8 +51,8 @@ export function Stepper() {
         )
         return (
           <li key={step.to} aria-current={active ? 'step' : undefined}>
-            {done ? (
-              <Link to={step.to} className={css({ display: 'block', _hover: { opacity: 0.85 } })}>
+            {done && id ? (
+              <Link to={step.to} params={{ id }} className={css({ display: 'block', _hover: { opacity: 0.85 } })}>
                 {content}
               </Link>
             ) : (
