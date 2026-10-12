@@ -22,6 +22,23 @@ docker compose down         # keep the data
 docker compose down -v      # drop the database volume too
 ```
 
+## Deploy to a server
+
+`compose.prod.yaml` runs the same stack behind Caddy: only ports 22, 80 and 443 are open, everything is behind HTTP basic auth, HTTPS comes from Let's Encrypt, and document uploads are limited to six per minute per address. On a fresh Ubuntu server (2 GB of RAM or more):
+
+```bash
+HOST=root@<server-ip>
+SITE=<server-ip with dashes>.sslip.io
+
+ssh $HOST 'bash -s' < deploy/bootstrap.sh
+git archive HEAD | ssh $HOST 'mkdir -p /opt/kyb && tar x -C /opt/kyb'
+ssh $HOST "bash /opt/kyb/deploy/provision.sh $SITE"
+ssh -t $HOST 'cd /opt/kyb && read -rsp "OpenAI key: " key && echo && sed -i "s|^OPENAI_API_KEY=.*|OPENAI_API_KEY=$key|" .env && docker compose -f compose.prod.yaml up -d --build'
+ssh $HOST 'cat /opt/kyb/.demo-credentials'
+```
+
+`bootstrap.sh` installs Docker, adds a 2 GB swap file and turns the firewall on; `provision.sh` creates `.env` with a random database password and a random login in `.demo-credentials`. To update, send the archive again and run `docker compose -f compose.prod.yaml up -d --build` on the server.
+
 ## Layout
 
 ```
