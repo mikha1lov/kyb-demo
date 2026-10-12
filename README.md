@@ -12,7 +12,7 @@ requirement. The mismatch that cost a full rejection after 18 screens in the rea
 ```
 backend/    Rust + Axum. POST /api/documents/analyze; extraction behind a trait; comparison is pure and tested
 fixtures/   Synthetic documents (fictional people, addresses, numbers) and the script that makes them
-frontend/   (next stage) TanStack Start + Form + Zod + PandaCSS
+frontend/   TanStack Start, TanStack Form, Zod, PandaCSS, Ark UI. Three-step onboarding with the document cross-check
 ```
 
 ## Run the backend
@@ -25,6 +25,18 @@ cargo run                   # http://127.0.0.1:8787
 ```
 
 Settings (environment or `backend/.env`): `OPENAI_API_KEY`, `OPENAI_MODEL` (default `gpt-5.4-mini`), `BIND_ADDR`.
+
+## Run the frontend
+
+```bash
+cd frontend
+npm install
+npm run dev                 # http://localhost:3000, or the next free port; /api is proxied to the backend
+npm run typecheck
+npm run build
+```
+
+The proxy target is `http://127.0.0.1:8787`; set `API_URL` to change it. The draft is kept in localStorage.
 
 ## Try it
 
