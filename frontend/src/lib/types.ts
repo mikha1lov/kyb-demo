@@ -8,6 +8,7 @@ export type Extracted = {
   kind: DocKind
   legalName: ExtractedField
   registrationNumber: ExtractedField
+  taxNumber: ExtractedField
   address: ExtractedField
   periodStart: ExtractedField
   periodEnd: ExtractedField
